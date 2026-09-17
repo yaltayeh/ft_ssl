@@ -14,26 +14,30 @@ int run_hash_function(struct hash_function *hash_func, struct content_input *inp
         write(2, "Error: Memory allocation failed\n", 32);
         return (1);
     }
+    hash_func->init(ctx);
 
-    uint8_t output[hash_func->output_length];
     ssize_t bytes_read;
     char buffer[1024];
 
-    memset(output, 0, sizeof(output));
     while ((bytes_read = read_ci(input, buffer, sizeof(buffer))) > 0)
     {
-        hash_func->hash(buffer, bytes_read, output, ctx);
+        hash_func->update(ctx, (const uint8_t *)buffer, bytes_read);
     }
 
+    
     if (bytes_read < 0)
     {
         write(2, "Error: Failed to read input\n", 28);
         free(ctx);
         return (1);
     }
+    
+    uint8_t output[hash_func->output_size];
+    hash_func->final(ctx, output);
+    
 
     // Print the hash output in hexadecimal format
-    for (size_t i = 0; i < hash_func->output_length; i++)
+    for (size_t i = 0; i < hash_func->output_size; i++)
     {
         printf("%02x", output[i]);
     }

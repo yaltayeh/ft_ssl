@@ -39,7 +39,7 @@ struct hash_function
     void (*final)(void *ctx, uint8_t *output);
     size_t ctx_size;
     size_t block_size;
-    uint8_t hash_size;
+    uint8_t output_size;
 };
 
 struct content_input *create_ci_from_file(const char *filename);
