@@ -29,6 +29,8 @@ struct content_input
             size_t offset;
         } string;
     } u;
+
+    struct content_input *next;
 };
 
 struct hash_function
@@ -42,9 +44,16 @@ struct hash_function
     uint8_t output_size;
 };
 
-struct content_input *create_ci_from_file(const char *filename);
-struct content_input *create_ci_from_string(const char *string);
-struct content_input *create_ci_from_stdin(void);
+struct flags
+{
+    int p;
+    int q;
+    int r;
+};
+
+struct content_input *create_ci_from_file(const char *filename, struct content_input *next);
+struct content_input *create_ci_from_string(const char *string, struct content_input *next);
+struct content_input *create_ci_from_stdin(struct content_input *next);
 ssize_t read_ci(struct content_input *input, char *buffer, size_t len);
 void free_ci(struct content_input *input);
 

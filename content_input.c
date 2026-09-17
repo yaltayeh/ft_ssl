@@ -4,64 +4,68 @@
 #include <stdlib.h>
 #include <fcntl.h>
 
-struct content_input *create_ci_from_file(const char *filename)
+struct content_input *create_ci_from_file(const char *filename, struct content_input *next)
 {
-    struct content_input *input = malloc(sizeof(struct content_input));
-    if (!input)
+    struct content_input *ci = malloc(sizeof(struct content_input));
+    if (!ci)
         return NULL;
 
-    input->type = CONTENT_TYPE_FILE;
-    input->u.file.filename = strdup(filename);
-    if (!input->u.file.filename)
+    ci->type = CONTENT_TYPE_FILE;
+    ci->u.file.filename = strdup(filename);
+    if (!ci->u.file.filename)
     {
-        free(input);
+        free(ci);
         return NULL;
     }
-    input->u.file.fd = open(filename, O_RDONLY);
-    if (input->u.file.fd < 0)
+    ci->u.file.fd = open(filename, O_RDONLY);
+    if (ci->u.file.fd < 0)
     {
-        free(input->u.file.filename);
-        free(input);
+        free(ci->u.file.filename);
+        free(ci);
         return NULL;
     }
 
-    return input;
+    ci->next = next;
+    return ci;
 }
 
-struct content_input *create_ci_from_string(const char *string)
+struct content_input *create_ci_from_string(const char *string, struct content_input *next)
 {
-    struct content_input *input = malloc(sizeof(struct content_input));
-    if (!input)
+    struct content_input *ci = malloc(sizeof(struct content_input));
+    if (!ci)
         return NULL;
 
-    input->type = CONTENT_TYPE_STRING;
-    input->u.string.string = strdup(string);
-    if (!input->u.string.string)
+    ci->type = CONTENT_TYPE_STRING;
+    ci->u.string.string = strdup(string);
+    if (!ci->u.string.string)
     {
-        free(input);
+        free(ci);
         return NULL;
     }
-    input->u.string.length = strlen(string);
-    input->u.string.offset = 0;
+    ci->u.string.length = strlen(string);
+    ci->u.string.offset = 0;
 
-    return input;
+    ci->next = next;
+    return ci;
 }
 
-struct content_input *create_ci_from_stdin(void)
+struct content_input *create_ci_from_stdin(struct content_input *next)
 {
-    struct content_input *input = malloc(sizeof(struct content_input));
-    if (!input)
+    struct content_input *ci = malloc(sizeof(struct content_input));
+    if (!ci)
         return NULL;
 
-    input->u.file.filename = strdup("stdin");
-    if (!input->u.file.filename)
+    ci->type = CONTENT_TYPE_FILE;
+    ci->u.file.filename = strdup("stdin");
+    if (!ci->u.file.filename)
     {
-        free(input);
+        free(ci);
         return NULL;
     }
-    input->u.file.fd = STDIN_FILENO;
+    ci->u.file.fd = STDIN_FILENO;
 
-    return input;
+    ci->next = next;
+    return ci;
 }
 
 void free_ci(struct content_input *input)
@@ -79,6 +83,9 @@ void free_ci(struct content_input *input)
     {
         free(input->u.string.string);
     }
+
+    if (input->next)
+        free_ci(input->next);
 
     free(input);
 }
