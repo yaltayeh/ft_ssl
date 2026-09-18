@@ -37,7 +37,8 @@ struct content_input
 
 struct hash_function
 {
-    const char *name;
+    const char *name;         /* lowercase, matched against argv[1] */
+    const char *display_name; /* uppercase, printed in the output lines */
     void (*init)(void *ctx);
     void (*update)(void *ctx, const uint8_t *data, size_t len);
     void (*final)(void *ctx, uint8_t *output);
@@ -53,9 +54,10 @@ struct flags
     int r;
 };
 
-const char *get_store_buffer();
-char **enable_store_buffer();
-void disable_store_buffer();
+const char *get_store_buffer(void);
+size_t get_store_buffer_len(void);
+char **enable_store_buffer(void);
+void disable_store_buffer(void);
 
 struct content_input *create_ci_from_file(const char *filename);
 struct content_input *create_ci_from_string(const char *string);
@@ -64,6 +66,13 @@ ssize_t read_ci(struct content_input *input, char *buffer, size_t len);
 void free_ci(struct content_input *input);
 
 struct hash_function *get_hash_function_by_name(const char *name);
+const struct hash_function **get_hash_function_list(void);
+
+size_t ft_strlen(const char *s);
+void out_bytes(const char *data, size_t len);
+void out_str(const char *s);
+void out_hex(const uint8_t *data, size_t len);
+void err_str(const char *s);
 
 uint32_t rightrotate(uint32_t val, int n);
 uint32_t leftrotate(uint32_t val, int n);

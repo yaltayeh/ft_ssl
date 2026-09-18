@@ -138,7 +138,10 @@ static void process_md5_block(struct md5_context *md5_ctx, const uint8_t block[B
     for (size_t i = 0; i < sizeof(M) / sizeof(M[0]); i++)
     {
         size_t j = i * 4;
-        M[i] = block[j] | block[j + 1] << 8 | block[j + 2] << 16 | block[j + 3] << 24;
+        /* the << 24 byte is cast: a uint8_t promotes to int, so any value
+        ** >= 0x80 shifted left 24 would overflow a signed int (UB) */
+        M[i] = block[j] | block[j + 1] << 8 | block[j + 2] << 16
+               | (uint32_t)block[j + 3] << 24;
     }
 
     for (size_t i = 0; i < 64; i++)
@@ -231,6 +234,7 @@ static void md5_hash_final(void *ctx, uint8_t *output)
 
 const struct hash_function md5_hash_function = {
     "md5",
+    "MD5",
     md5_hash_init,
     md5_hash_update,
     md5_hash_final,

@@ -9,12 +9,17 @@ static char *store_buffer = NULL;
 static size_t store_buffer_len = 0;
 static int is_store_buffer_enabled = 0;
 
-const char *get_store_buffer()
+const char *get_store_buffer(void)
 {
     return store_buffer;
 }
 
-char **enable_store_buffer()
+size_t get_store_buffer_len(void)
+{
+    return store_buffer_len;
+}
+
+char **enable_store_buffer(void)
 {
     is_store_buffer_enabled = 1;
     store_buffer_len = 0;
@@ -28,7 +33,7 @@ char **enable_store_buffer()
     return &store_buffer;
 }
 
-void disable_store_buffer()
+void disable_store_buffer(void)
 {
     is_store_buffer_enabled = 0;
     if (store_buffer)

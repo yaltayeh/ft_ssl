@@ -10,6 +10,11 @@ static const struct hash_function *hash_functions[] = {
     NULL
 };
 
+const struct hash_function **get_hash_function_list(void)
+{
+    return (const struct hash_function **)hash_functions;
+}
+
 struct hash_function *get_hash_function_by_name(const char *name)
 {
     for (size_t i = 0; hash_functions[i] != NULL; i++)

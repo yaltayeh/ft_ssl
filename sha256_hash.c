@@ -120,7 +120,10 @@ static void message_schedule(uint32_t w[64], const uint8_t block[64])
     for (size_t i = 0; i < 16; i++)
     {
         size_t j = i * 4;
-        w[i] = block[j + 3] | block[j + 2] << 8 | block[j + 1] << 16 | block[j] << 24;
+        /* the << 24 byte is cast: a uint8_t promotes to int, so any value
+        ** >= 0x80 shifted left 24 would overflow a signed int (UB) */
+        w[i] = block[j + 3] | block[j + 2] << 8 | block[j + 1] << 16
+               | (uint32_t)block[j] << 24;
     }
 
     for (size_t i = 16; i < 64; i++)
@@ -251,6 +254,7 @@ static void sha256_hash_final(void *ctx, uint8_t *output)
 
 const struct hash_function sha256_hash_function = {
     "sha256",
+    "SHA256",
     sha256_hash_init,
     sha256_hash_update,
     sha256_hash_final,

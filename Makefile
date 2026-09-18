@@ -14,6 +14,7 @@ SRCS =	main.c				\
 		define_functions.c	\
 		content_input.c		\
 		utils.c				\
+		output.c			\
 
 OBJS = $(SRCS:%.c=$(BUILD_DIR)/%.o)
 
