@@ -20,6 +20,8 @@ struct content_input
         struct
         {
             char *filename;
+            uint8_t is_open;
+            uint8_t is_stdin;
             int fd;
         } file;
         struct
@@ -51,9 +53,13 @@ struct flags
     int r;
 };
 
-struct content_input *create_ci_from_file(const char *filename, struct content_input *next);
-struct content_input *create_ci_from_string(const char *string, struct content_input *next);
-struct content_input *create_ci_from_stdin(struct content_input *next);
+const char *get_store_buffer();
+char **enable_store_buffer();
+void disable_store_buffer();
+
+struct content_input *create_ci_from_file(const char *filename);
+struct content_input *create_ci_from_string(const char *string);
+struct content_input *create_ci_from_stdin(void);
 ssize_t read_ci(struct content_input *input, char *buffer, size_t len);
 void free_ci(struct content_input *input);
 

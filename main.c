@@ -10,44 +10,77 @@ void print_usage(void)
     write(2, "Usage: ./ft_ssl <command> [options] [file/string]\n", 50);
 }
 
-void print_ouput(struct hash_function *hash_func, struct content_input *ci, uint8_t *output, struct flags *flags)
+static void print_hex(uint8_t *output, size_t len)
+{
+    for (size_t i = 0; i < len; i++)
+        printf("%02x", output[i]);
+}
+
+static void print_stdin_output(struct hash_function *hash_func, uint8_t *output, struct flags *flags)
+{
+    if (flags->p)
+    {
+        if (flags->q)
+        {
+            // سطر خام مستقل لمحتوى stdin، بدون أقواس ولا اسم خوارزمية
+            printf("%s\n", get_store_buffer());
+            print_hex(output, hash_func->output_size);
+            printf("\n");
+            return;
+        }
+        printf("(\"%s\")= ", get_store_buffer());
+    }
+    else if (!flags->q)
+    {
+        printf("(stdin)= ");
+    }
+    // ملاحظة: -r لا تؤثر إطلاقًا على صيغة stdin، ولذلك لا يوجد أي فحص لـ flags->r هنا
+
+    print_hex(output, hash_func->output_size);
+    printf("\n");
+}
+
+static void print_file_or_string_output(struct hash_function *hash_func, struct content_input *ci,
+                                         uint8_t *output, struct flags *flags)
 {
     if (flags->q)
     {
-        for (size_t i = 0; i < hash_func->output_size; i++)
-        {
-            printf("%02x", output[i]);
-        }
+        print_hex(output, hash_func->output_size);
         printf("\n");
+        return;
     }
-    else if (flags->r)
+
+    if (flags->r)
     {
-        for (size_t i = 0; i < hash_func->output_size; i++)
-        {
-            printf("%02x", output[i]);
-        }
+        print_hex(output, hash_func->output_size);
         if (ci->type == CONTENT_TYPE_FILE)
             printf(" %s\n", ci->u.file.filename);
         else if (ci->type == CONTENT_TYPE_STRING)
-            printf("(\"%s\")\n", ci->u.string.string);
+            printf(" \"%s\"\n", ci->u.string.string);
+        return;
     }
-    else
-    {
-        printf("%s (", hash_func->name);
-        if (ci->type == CONTENT_TYPE_FILE)
-            printf("%s (%s) = ", hash_func->name, ci->u.file.filename);
-        else if (ci->type == CONTENT_TYPE_STRING)
-            printf("%s (\"%s\") = ", hash_func->name, ci->u.string.string);
 
-        for (size_t i = 0; i < hash_func->output_size; i++)
-        {
-            printf("%02x", output[i]);
-        }
-        printf("\n");
-    }
+    // الصيغة الافتراضية (بدون -q ولا -r)
+    if (ci->type == CONTENT_TYPE_FILE)
+        printf("%s (%s) = ", hash_func->name, ci->u.file.filename);
+    else if (ci->type == CONTENT_TYPE_STRING)
+        printf("%s (\"%s\") = ", hash_func->name, ci->u.string.string);
+
+    print_hex(output, hash_func->output_size);
+    printf("\n");
 }
 
-int run_hash_function(struct hash_function *hash_func, struct content_input *input, struct flags *flags)
+void print_ouput(struct hash_function *hash_func, struct content_input *ci,
+                  uint8_t *output, struct flags *flags)
+{
+    if (ci->type == CONTENT_TYPE_FILE && ci->u.file.is_stdin)
+        print_stdin_output(hash_func, output, flags);
+    else
+        print_file_or_string_output(hash_func, ci, output, flags);
+}
+
+
+int run_hash_function(struct hash_function *hash_func, struct content_input *ci, struct flags *flags)
 {
     size_t ctx_size = hash_func->ctx_size;
     void *ctx = malloc(ctx_size);
@@ -61,15 +94,30 @@ int run_hash_function(struct hash_function *hash_func, struct content_input *inp
     ssize_t bytes_read;
     char buffer[1024];
 
-    while ((bytes_read = read_ci(input, buffer, sizeof(buffer))) > 0)
+    int store_data = flags->p && (ci->type == CONTENT_TYPE_FILE && ci->u.file.is_stdin);
+    if (store_data && enable_store_buffer() == NULL)
+    {
+        write(2, "Error: Memory allocation failed\n", 32);
+        free(ctx);
+        return (1);
+    }
+
+    while ((bytes_read = read_ci(ci, buffer, sizeof(buffer))) > 0)
     {
         hash_func->update(ctx, (const uint8_t *)buffer, bytes_read);
     }
 
-    
     if (bytes_read < 0)
     {
-        write(2, "Error: Failed to read input\n", 28);
+        if (ci->type == CONTENT_TYPE_FILE)
+            perror(ci->u.file.filename);
+        else if (ci->type == CONTENT_TYPE_STRING)
+            perror(ci->u.string.string);
+        else
+            write(2, "Error: Failed to read input\n", 28);
+            
+        if (store_data)
+            disable_store_buffer();
         free(ctx);
         return (1);
     }
@@ -78,7 +126,10 @@ int run_hash_function(struct hash_function *hash_func, struct content_input *inp
     hash_func->final(ctx, output);
     free(ctx);
     
-    print_ouput(hash_func, input, output, flags);
+    print_ouput(hash_func, ci, output, flags);
+
+    if (store_data)
+        disable_store_buffer();
 
     return (0);
 }
@@ -101,6 +152,8 @@ int main(int argc, char **argv)
     struct flags flags = {0, 0, 0};
     
     struct content_input *ci = NULL;
+    struct content_input *last_ci = NULL;
+
     for (int i = 2; i < argc; i++)
     {
         if (strcmp(argv[i], "-p") == 0)
@@ -117,49 +170,55 @@ int main(int argc, char **argv)
         }
         else if (strcmp(argv[i], "-s") == 0 && i + 1 < argc)
         {
-            struct content_input *input = create_ci_from_string(argv[i + 1], ci);
-            if (!input)
+            struct content_input *new_ci = create_ci_from_string(argv[i + 1]);
+            if (!new_ci)
             {
                 free_ci(ci);
                 write(2, "Error: Memory allocation failed\n", 32);
                 return (1);
             }
-            ci = input;
+            if (last_ci)
+                last_ci->next = new_ci;
+            else
+                ci = new_ci;
+            last_ci = new_ci;
             
             i++; // Skip the next argument since it's the string
         }
         else
         {
-            struct content_input *input = create_ci_from_file(argv[i], ci);
-            if (!input)
+            struct content_input *new_ci = create_ci_from_file(argv[i]);
+            if (!new_ci)
             {
                 free_ci(ci);
                 write(2, "Error: Memory allocation failed\n", 32);
                 return (1);
             }
-            ci = input;
+            if (last_ci)
+                last_ci->next = new_ci;
+            else
+                ci = new_ci;
+            last_ci = new_ci;
         }
     }
 
     if (ci == NULL || flags.p)
     {
-        struct content_input *ci = create_ci_from_stdin(ci);
-        if (!ci)
+        struct content_input *new_ci = create_ci_from_stdin();
+        if (!new_ci)
         {
             write(2, "Error: Memory allocation failed\n", 32);
             return (1);
         }
-        free_ci(ci);
+        new_ci->next = ci;
+        ci = new_ci;
     }
 
     while (ci)
     {
-        if (run_hash_function(hash_func, ci, &flags) != 0)
-        {
-            free_ci(ci);
-            return (1);
-        }
+        run_hash_function(hash_func, ci, &flags);
         struct content_input *next = ci->next;
+        ci->next = NULL; // Disconnect the current node from the list before freeing
         free_ci(ci);
         ci = next;
     }
