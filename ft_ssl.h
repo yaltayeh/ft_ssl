@@ -65,4 +65,9 @@ void free_ci(struct content_input *input);
 
 struct hash_function *get_hash_function_by_name(const char *name);
 
+uint32_t rightrotate(uint32_t val, int n);
+uint32_t leftrotate(uint32_t val, int n);
+void little_endian_encode(uint64_t value, uint8_t *output, size_t output_size);
+void big_endian_encode(uint64_t value, uint8_t *output, size_t output_size);
+
 #endif // FT_SSL_H

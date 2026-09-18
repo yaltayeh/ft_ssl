@@ -13,6 +13,7 @@ SRCS =	main.c				\
 		sha256_hash.c		\
 		define_functions.c	\
 		content_input.c		\
+		utils.c				\
 
 OBJS = $(SRCS:%.c=$(BUILD_DIR)/%.o)
 

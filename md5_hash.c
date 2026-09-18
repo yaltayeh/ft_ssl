@@ -126,13 +126,6 @@ static uint32_t FGHI(size_t i, uint32_t b, uint32_t c, uint32_t d)
     }
 }
 
-static uint32_t leftrotate(uint32_t val, int n)
-{
-    if (n % 32 == 0)
-        return (val);
-    return ((val << n) | (val >> (32 - n)));
-}
-
 static void process_md5_block(struct md5_context *md5_ctx, const uint8_t block[BLOCK_SIZE])
 {
     // copy the current state to local variables
@@ -198,15 +191,6 @@ static void md5_hash_update(void *ctx, const uint8_t *data, size_t len)
         // Store remaining data in the buffer
         memcpy(md5_ctx->buffer, data, len);
         md5_ctx->buffer_len = len;
-    }
-}
-
-static void little_endian_encode(uint64_t value, uint8_t *output, size_t output_size)
-{
-    for (size_t i = 0; i < output_size; i++)
-    {
-        output[i] = (uint8_t)(value & 0xFF);
-        value >>= 8;
     }
 }
 
