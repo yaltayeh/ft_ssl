@@ -44,6 +44,20 @@ void disable_store_buffer(void)
     store_buffer_len = 0;
 }
 
+/* Appends a node to the argv-ordered list; returns 0 on allocation failure. */
+int append_ci(struct content_input *new_ci, struct content_input **head,
+                     struct content_input **tail)
+{
+    if (!new_ci)
+        return (0);
+    if (*tail)
+        (*tail)->next = new_ci;
+    else
+        *head = new_ci;
+    *tail = new_ci;
+    return (1);
+}
+
 static char *add_to_store_buffer(const char *data, size_t len)
 {
     if (!is_store_buffer_enabled)

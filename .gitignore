@@ -1,3 +1,8 @@
 ft_ssl
 a.out
 build
+
+Dockerfile
+build.sh
+tests
+tests.logs

@@ -1,4 +1,5 @@
-#include "ft_ssl.h"
+#include "hash_functions.h"
+#include "../ft_ssl.h"
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
@@ -10,8 +11,6 @@ Note 3: The compression function uses 8 working variables, a through h
 Note 4: Big-endian convention is used when expressing the constants in this pseudocode,
     and when parsing message block data from bytes to words, for example,
     the first word of the input message "abc" after padding is 0x61626380
-
-
 
 Pre-processing (Padding):
 begin with the original message of length L bits

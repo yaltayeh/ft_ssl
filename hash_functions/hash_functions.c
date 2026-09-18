@@ -1,4 +1,4 @@
-#include "ft_ssl.h"
+#include "hash_functions.h"
 #include <string.h>
 
 extern const struct hash_function md5_hash_function;

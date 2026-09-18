@@ -1,4 +1,5 @@
-#include "ft_ssl.h"
+#include "hash_functions.h"
+#include "../ft_ssl.h"
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
