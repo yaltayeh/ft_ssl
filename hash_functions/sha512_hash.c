@@ -77,13 +77,11 @@ static const struct sha512_state init_state = {
     .h7 = 0x5be0cd19137e2179,
 };
 
-static void sha512_hash_init(void *ctx)
+static void sha512_hash_init(struct hash_context *ctx)
 {
-    struct sha512_context *sha512_ctx = (struct sha512_context *)ctx;
-
-    sha512_ctx->state = init_state;
-    sha512_ctx->total_len = 0;
-    sha512_ctx->buffer_len = 0;
+    struct sha512_state *state = (struct sha512_state *)ctx->state;
+    
+    *state = init_state;
 }
 
 /*
@@ -117,19 +115,20 @@ static void message_schedule(uint64_t w[80], const uint8_t block[SHA512_BLOCK_SI
     }
 }
 
-static void process_sha512_block(struct sha512_context *sha_ctx, const uint8_t block[SHA512_BLOCK_SIZE])
+void sha512_hash_process(struct hash_context *ctx, const uint8_t block[SHA512_BLOCK_SIZE])
 {
     uint64_t w[80];
     message_schedule(w, block);
 
-    uint64_t a = sha_ctx->state.h0;
-    uint64_t b = sha_ctx->state.h1;
-    uint64_t c = sha_ctx->state.h2;
-    uint64_t d = sha_ctx->state.h3;
-    uint64_t e = sha_ctx->state.h4;
-    uint64_t f = sha_ctx->state.h5;
-    uint64_t g = sha_ctx->state.h6;
-    uint64_t h = sha_ctx->state.h7;
+    struct sha512_state *state_ptr = (struct sha512_state*)ctx->state;
+    uint64_t a = state_ptr->h0;
+    uint64_t b = state_ptr->h1;
+    uint64_t c = state_ptr->h2;
+    uint64_t d = state_ptr->h3;
+    uint64_t e = state_ptr->h4;
+    uint64_t f = state_ptr->h5;
+    uint64_t g = state_ptr->h6;
+    uint64_t h = state_ptr->h7;
 
     for (size_t i = 0; i < 80; i++)
     {
@@ -151,55 +150,21 @@ static void process_sha512_block(struct sha512_context *sha_ctx, const uint8_t b
         a = temp1 + temp2;
     }
 
-    sha_ctx->state.h0 += a;
-    sha_ctx->state.h1 += b;
-    sha_ctx->state.h2 += c;
-    sha_ctx->state.h3 += d;
-    sha_ctx->state.h4 += e;
-    sha_ctx->state.h5 += f;
-    sha_ctx->state.h6 += g;
-    sha_ctx->state.h7 += h;
+    state_ptr->h0 += a;
+    state_ptr->h1 += b;
+    state_ptr->h2 += c;
+    state_ptr->h3 += d;
+    state_ptr->h4 += e;
+    state_ptr->h5 += f;
+    state_ptr->h6 += g;
+    state_ptr->h7 += h;
 }
 
-void sha512_hash_update(void *ctx, const uint8_t *data, size_t len)
+void sha512_padding_buffer(struct hash_context *ctx)
 {
-    struct sha512_context *sha_ctx = (struct sha512_context *)ctx;
-    sha_ctx->total_len += len;
+    size_t buffer_len = ctx->buffer_len;
 
-    if (sha_ctx->buffer_len > 0)
-    {
-        size_t space_in_buffer = SHA512_BLOCK_SIZE - sha_ctx->buffer_len;
-        size_t to_copy = (len < space_in_buffer) ? len : space_in_buffer;
-        memcpy(sha_ctx->buffer + sha_ctx->buffer_len, data, to_copy);
-        sha_ctx->buffer_len += to_copy;
-        data += to_copy;
-        len -= to_copy;
-
-        if (sha_ctx->buffer_len == SHA512_BLOCK_SIZE)
-        {
-            process_sha512_block(sha_ctx, sha_ctx->buffer);
-            sha_ctx->buffer_len = 0; // Reset buffer length after processing
-        }
-    }
-    while (len >= SHA512_BLOCK_SIZE)
-    {
-        process_sha512_block(sha_ctx, data);
-        data += SHA512_BLOCK_SIZE;
-        len -= SHA512_BLOCK_SIZE;
-    }
-    if (len > 0)
-    {
-        // Store remaining data in the buffer
-        memcpy(sha_ctx->buffer, data, len);
-        sha_ctx->buffer_len = len;
-    }
-}
-
-void sha512_padding_buffer(struct sha512_context *sha512_ctx)
-{
-    size_t buffer_len = sha512_ctx->buffer_len;
-
-    uint8_t *buffer = sha512_ctx->buffer;
+    uint8_t *buffer = ctx->buffer;
 
     buffer[buffer_len] = 0x80; // Append the '1' bit
     buffer_len++;
@@ -207,41 +172,40 @@ void sha512_padding_buffer(struct sha512_context *sha512_ctx)
     if (buffer_len > SHA512_BLOCK_SIZE - 16)
     {
         memset(buffer + buffer_len, 0, SHA512_BLOCK_SIZE - buffer_len);
-        process_sha512_block(sha512_ctx, buffer);
+        sha512_hash_process(ctx, buffer);
         buffer_len = 0; // Reset buffer length after processing
     }
     memset(buffer + buffer_len, 0, SHA512_BLOCK_SIZE - 16 - buffer_len);
     buffer_len = SHA512_BLOCK_SIZE - 16;
 
-    size_t total_len_bits = sha512_ctx->total_len * 8;
+    size_t total_len_bits = ctx->total_len * 8;
     memset(buffer + buffer_len, 0, 8);
     big_endian_encode(total_len_bits, buffer + buffer_len + 8, 8);
-    process_sha512_block(sha512_ctx, buffer);
+    sha512_hash_process(ctx, buffer);
 }
 
-static void sha512_hash_final(void *ctx, uint8_t *output)
+static void sha512_hash_final(struct hash_context *ctx, uint8_t *output)
 {
-    struct sha512_context *sha512_ctx = (struct sha512_context *)ctx;
+    sha512_padding_buffer(ctx);
 
-    sha512_padding_buffer(sha512_ctx);
-
-    big_endian_encode(sha512_ctx->state.h0, output + 0,  8);
-    big_endian_encode(sha512_ctx->state.h1, output + 8,  8);
-    big_endian_encode(sha512_ctx->state.h2, output + 16, 8);
-    big_endian_encode(sha512_ctx->state.h3, output + 24, 8);
-    big_endian_encode(sha512_ctx->state.h4, output + 32, 8);
-    big_endian_encode(sha512_ctx->state.h5, output + 40, 8);
-    big_endian_encode(sha512_ctx->state.h6, output + 48, 8);
-    big_endian_encode(sha512_ctx->state.h7, output + 56, 8);
+    struct sha512_state *state = (struct sha512_state *)ctx->state;
+    big_endian_encode(state->h0, output + 0,  8);
+    big_endian_encode(state->h1, output + 8,  8);
+    big_endian_encode(state->h2, output + 16, 8);
+    big_endian_encode(state->h3, output + 24, 8);
+    big_endian_encode(state->h4, output + 32, 8);
+    big_endian_encode(state->h5, output + 40, 8);
+    big_endian_encode(state->h6, output + 48, 8);
+    big_endian_encode(state->h7, output + 56, 8);
 }
 
 const struct hash_function sha512_hash_function = {
     "sha512",
     "SHA512",
     sha512_hash_init,
-    sha512_hash_update,
+    sha512_hash_process,
     sha512_hash_final,
-    sizeof(struct sha512_context),
+    sizeof(struct sha512_state),
     SHA512_BLOCK_SIZE,
     SHA512_HASH_SIZE
 };

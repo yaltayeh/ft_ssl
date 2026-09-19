@@ -31,36 +31,33 @@ static const struct sha512_state init_state = {
     .h7 = 0x47b5481dbefa4fa4,
 };
 
-static void sha384_hash_init(void *ctx)
+static void sha384_hash_init(struct hash_context *ctx)
 {
-    struct sha512_context *sha384_ctx = (struct sha512_context *)ctx;
-
-    sha384_ctx->state = init_state;
-    sha384_ctx->total_len = 0;
-    sha384_ctx->buffer_len = 0;
+    struct sha512_state *state = (struct sha512_state *)ctx->state;
+    
+    *state = init_state;
 }
 
-static void sha384_hash_final(void *ctx, uint8_t *output)
+static void sha384_hash_final(struct hash_context *ctx, uint8_t *output)
 {
-    struct sha512_context *sha384_ctx = (struct sha512_context *)ctx;
+    sha512_padding_buffer(ctx);
 
-    sha512_padding_buffer(sha384_ctx);
-
-    big_endian_encode(sha384_ctx->state.h0, output + 0,  8);
-    big_endian_encode(sha384_ctx->state.h1, output + 8,  8);
-    big_endian_encode(sha384_ctx->state.h2, output + 16, 8);
-    big_endian_encode(sha384_ctx->state.h3, output + 24, 8);
-    big_endian_encode(sha384_ctx->state.h4, output + 32, 8);
-    big_endian_encode(sha384_ctx->state.h5, output + 40, 8);
+    struct sha512_state *state = (struct sha512_state *)ctx->state;
+    big_endian_encode(state->h0, output + 0,  8);
+    big_endian_encode(state->h1, output + 8,  8);
+    big_endian_encode(state->h2, output + 16, 8);
+    big_endian_encode(state->h3, output + 24, 8);
+    big_endian_encode(state->h4, output + 32, 8);
+    big_endian_encode(state->h5, output + 40, 8);
 }
 
 const struct hash_function sha384_hash_function = {
     "sha384",
     "SHA384",
     sha384_hash_init,
-    sha512_hash_update,
+    sha512_hash_process,
     sha384_hash_final,
-    sizeof(struct sha512_context),
+    sizeof(struct sha512_state),
     SHA512_BLOCK_SIZE,
     SHA384_HASH_SIZE
 };

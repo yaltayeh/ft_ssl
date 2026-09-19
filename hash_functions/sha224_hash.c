@@ -20,37 +20,34 @@ static const struct sha256_state init_state = {
     .h7 = 0xbefa4fa4,
 };
 
-static void sha224_hash_init(void *ctx)
+static void sha224_hash_init(struct hash_context *ctx)
 {
-    struct sha256_context *sha224_ctx = (struct sha256_context *)ctx;
-
-    sha224_ctx->state = init_state;
-    sha224_ctx->total_len = 0;
-    sha224_ctx->buffer_len = 0;
+    struct sha256_state *state = (struct sha256_state *)ctx->state;
+    
+    *state = init_state;
 }
 
-static void sha224_hash_final(void *ctx, uint8_t *output)
+static void sha224_hash_final(struct hash_context *ctx, uint8_t *output)
 {
-    struct sha256_context *sha224_ctx = (struct sha256_context *)ctx;
+    sha256_padding_buffer(ctx);
 
-    sha256_padding_buffer(sha224_ctx);
-
-    big_endian_encode(sha224_ctx->state.h0, output + 0, 4);
-    big_endian_encode(sha224_ctx->state.h1, output + 4, 4);
-    big_endian_encode(sha224_ctx->state.h2, output + 8, 4);
-    big_endian_encode(sha224_ctx->state.h3, output + 12, 4);
-    big_endian_encode(sha224_ctx->state.h4, output + 16, 4);
-    big_endian_encode(sha224_ctx->state.h5, output + 20, 4);
-    big_endian_encode(sha224_ctx->state.h6, output + 24, 4);
+    struct sha256_state *state = (struct sha256_state *)ctx->state;
+    big_endian_encode(state->h0, output + 0, 4);
+    big_endian_encode(state->h1, output + 4, 4);
+    big_endian_encode(state->h2, output + 8, 4);
+    big_endian_encode(state->h3, output + 12, 4);
+    big_endian_encode(state->h4, output + 16, 4);
+    big_endian_encode(state->h5, output + 20, 4);
+    big_endian_encode(state->h6, output + 24, 4);
 }
 
 const struct hash_function sha224_hash_function = {
     "sha224",
     "SHA224",
     sha224_hash_init,
-    sha256_hash_update,
+    sha256_hash_process,
     sha224_hash_final,
-    sizeof(struct sha256_context),
+    sizeof(struct sha256_state),
     SHA256_BLOCK_SIZE,
     SHA224_HASH_SIZE
 };

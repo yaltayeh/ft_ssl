@@ -27,14 +27,6 @@ struct md5_state
     uint32_t D;
 };
 
-struct md5_context
-{
-    struct md5_state state;
-    size_t total_len;
-    uint8_t buffer[BLOCK_SIZE];
-    size_t buffer_len;
-};
-
 /*
 for i from 0 to 63 do
     K[i] := floor(232 × abs(sin(i + 1)))
@@ -100,14 +92,11 @@ static const struct md5_state init_state = {
     .D = 0x10325476
 };
 
-static void md5_hash_init(void *ctx)
+static void md5_init(struct hash_context *ctx)
 {
-    struct md5_context *md5_ctx = (struct md5_context *)ctx;
+    struct md5_state *state = (struct md5_state *)ctx->state;
     
-    md5_ctx->state = init_state;
-
-    md5_ctx->total_len = 0;
-    md5_ctx->buffer_len = 0;
+    *state = init_state;
 }
 
 static uint32_t FGHI(size_t i, uint32_t b, uint32_t c, uint32_t d)
@@ -127,10 +116,11 @@ static uint32_t FGHI(size_t i, uint32_t b, uint32_t c, uint32_t d)
     }
 }
 
-static void process_md5_block(struct md5_context *md5_ctx, const uint8_t block[BLOCK_SIZE])
+static void md5_process_block(struct hash_context *ctx, const uint8_t block[BLOCK_SIZE])
 {
     // copy the current state to local variables
-    struct md5_state state = md5_ctx->state;
+    struct md5_state *state_ptr = (struct md5_state*)ctx->state;
+    struct md5_state state = *state_ptr;
 
     // Process the block (this is a placeholder, actual MD5 processing logic should be implemented here)
 
@@ -156,53 +146,18 @@ static void process_md5_block(struct md5_context *md5_ctx, const uint8_t block[B
         state.B = state.B + leftrotate_32(res, S[i]);
     }
 
-
     // Update the state with the processed values
-    md5_ctx->state.A += state.A;
-    md5_ctx->state.B += state.B;
-    md5_ctx->state.C += state.C;
-    md5_ctx->state.D += state.D;
+    state_ptr->A += state.A;
+    state_ptr->B += state.B;
+    state_ptr->C += state.C;
+    state_ptr->D += state.D;
 }
 
-static void md5_hash_update(void *ctx, const uint8_t *data, size_t len)
+static void padding_buffer(struct hash_context *ctx)
 {
-    struct md5_context *md5_ctx = (struct md5_context *)ctx;
-    md5_ctx->total_len += len;
+    size_t buffer_len = ctx->buffer_len;
 
-    if (md5_ctx->buffer_len > 0)
-    {
-        size_t space_in_buffer = BLOCK_SIZE - md5_ctx->buffer_len;
-        size_t to_copy = (len < space_in_buffer) ? len : space_in_buffer;
-        memcpy(md5_ctx->buffer + md5_ctx->buffer_len, data, to_copy);
-        md5_ctx->buffer_len += to_copy;
-        data += to_copy;
-        len -= to_copy;
-
-        if (md5_ctx->buffer_len == BLOCK_SIZE)
-        {
-            process_md5_block(md5_ctx, md5_ctx->buffer);
-            md5_ctx->buffer_len = 0; // Reset buffer length after processing
-        }
-    }
-    while (len >= BLOCK_SIZE)
-    {
-        process_md5_block(md5_ctx, data);
-        data += BLOCK_SIZE;
-        len -= BLOCK_SIZE; // Simulate processing a block
-    }
-    if (len > 0)
-    {
-        // Store remaining data in the buffer
-        memcpy(md5_ctx->buffer, data, len);
-        md5_ctx->buffer_len = len;
-    }
-}
-
-static void padding_buffer(struct md5_context *md5_ctx)
-{
-    size_t buffer_len = md5_ctx->buffer_len;
-
-    uint8_t *buffer = md5_ctx->buffer;
+    uint8_t *buffer = ctx->buffer;
 
     buffer[buffer_len] = 0x80; // Append the '1' bit
     buffer_len++;
@@ -210,36 +165,35 @@ static void padding_buffer(struct md5_context *md5_ctx)
     if (buffer_len > BLOCK_SIZE - 8)
     {
         memset(buffer + buffer_len, 0, BLOCK_SIZE - buffer_len);
-        process_md5_block(md5_ctx, buffer);
+        md5_process_block(ctx, buffer);
         buffer_len = 0; // Reset buffer length after processing
     }
     memset(buffer + buffer_len, 0, BLOCK_SIZE - 8 - buffer_len);
     buffer_len = BLOCK_SIZE - 8;
 
-    size_t total_len_bits = md5_ctx->total_len * 8;
+    size_t total_len_bits = ctx->total_len * 8;
     little_endian_encode(total_len_bits, buffer + buffer_len, 8);
-    process_md5_block(md5_ctx, buffer);
+    md5_process_block(ctx, buffer);
 }
 
-static void md5_hash_final(void *ctx, uint8_t *output)
-{
-    struct md5_context *md5_ctx = (struct md5_context *)ctx;
+static void md5_final(struct hash_context *ctx, uint8_t *output)
+{    
+    padding_buffer(ctx);
     
-    padding_buffer(md5_ctx);
-
-    little_endian_encode(md5_ctx->state.A, output + 0, 4);
-    little_endian_encode(md5_ctx->state.B, output + 4, 4);
-    little_endian_encode(md5_ctx->state.C, output + 8, 4);
-    little_endian_encode(md5_ctx->state.D, output + 12, 4);
+    struct md5_state *state = (struct md5_state *)ctx->state;
+    little_endian_encode(state->A, output + 0, 4);
+    little_endian_encode(state->B, output + 4, 4);
+    little_endian_encode(state->C, output + 8, 4);
+    little_endian_encode(state->D, output + 12, 4);
 }
 
 const struct hash_function md5_hash_function = {
     "md5",
     "MD5",
-    md5_hash_init,
-    md5_hash_update,
-    md5_hash_final,
-    sizeof(struct md5_context),
+    md5_init,
+    md5_process_block,
+    md5_final,
+    sizeof(struct md5_state),
     BLOCK_SIZE,
     MD5_HASH_SIZE
 };

@@ -107,11 +107,69 @@ static void print_ouput(struct hash_function *hash_func, struct content_input *c
         print_file_or_string_output(hash_func, ci, output, flags);
 }
 
+static void run_hash_update(struct hash_function *hash_func, struct hash_context *ctx, const uint8_t *data, size_t len)
+{
+    ctx->total_len += len;
+
+    if (ctx->buffer_len > 0)
+    {
+        size_t space_in_buffer = hash_func->block_size - ctx->buffer_len;
+        size_t to_copy = (len < space_in_buffer) ? len : space_in_buffer;
+        memcpy(ctx->buffer + ctx->buffer_len, data, to_copy);
+        ctx->buffer_len += to_copy;
+        data += to_copy;
+        len -= to_copy;
+
+        if (ctx->buffer_len == hash_func->block_size)
+        {
+            hash_func->process(ctx, ctx->buffer);
+            ctx->buffer_len = 0; // Reset buffer length after processing
+        }
+    }
+    while (len >= hash_func->block_size)
+    {
+        hash_func->process(ctx, data);
+        data += hash_func->block_size;
+        len -= hash_func->block_size; // Simulate processing a block
+    }
+    if (len > 0)
+    {
+        // Store remaining data in the buffer
+        memcpy(ctx->buffer, data, len);
+        ctx->buffer_len = len;
+    }
+}
+
+struct hash_context *init_hash_context(struct hash_function *hash_func)
+{
+    size_t total_size = sizeof(struct hash_context) + hash_func->state_size + hash_func->block_size;
+
+    struct hash_context *ctx = malloc(total_size);
+    if (ctx == NULL)
+        return (NULL);
+
+    memset(ctx, 0, sizeof(*ctx));
+
+    uint8_t *base = (uint8_t *)ctx;
+    ctx->state  = base + sizeof(struct hash_context);
+    ctx->buffer = base + sizeof(struct hash_context) + hash_func->state_size;
+
+    return (ctx);
+}
+
+void free_hash_context(struct hash_context *ctx)
+{
+    free(ctx);
+}
+
 int run_hash_function(struct hash_function *hash_func, struct content_input *ci,
                       struct flags *flags, const char *command)
 {
-    void *ctx = malloc(hash_func->ctx_size);
-    if (!ctx)
+    
+    struct hash_context *ctx;
+
+    ctx = init_hash_context(hash_func);
+    if (ctx == NULL)
     {
         err_str("ft_ssl: Error: Memory allocation failed\n");
         return (1);
@@ -125,13 +183,13 @@ int run_hash_function(struct hash_function *hash_func, struct content_input *ci,
     if (store_data && enable_store_buffer() == NULL)
     {
         err_str("ft_ssl: Error: Memory allocation failed\n");
-        free(ctx);
+        free_hash_context(ctx);
         return (1);
     }
 
     errno = 0;
     while ((bytes_read = read_ci(ci, buffer, sizeof(buffer))) > 0)
-        hash_func->update(ctx, (const uint8_t *)buffer, bytes_read);
+        run_hash_update(hash_func, ctx, (uint8_t *)buffer, bytes_read);
 
     if (bytes_read < 0)
     {
@@ -144,13 +202,13 @@ int run_hash_function(struct hash_function *hash_func, struct content_input *ci,
 
         if (store_data)
             disable_store_buffer();
-        free(ctx);
+        free_hash_context(ctx);
         return (1);
     }
 
     uint8_t output[hash_func->output_size];
     hash_func->final(ctx, output);
-    free(ctx);
+    free_hash_context(ctx);
 
     print_ouput(hash_func, ci, output, flags);
 

@@ -25,16 +25,8 @@ struct sha256_state
     uint32_t h7;
 };
 
-struct sha256_context
-{
-    struct sha256_state state;
-    size_t total_len;
-    uint8_t buffer[SHA256_BLOCK_SIZE];
-    size_t buffer_len;
-};
-
-void sha256_hash_update(void *ctx, const uint8_t *data, size_t len);
-void sha256_padding_buffer(struct sha256_context *sha256_ctx);
+void sha256_hash_process(struct hash_context *ctx, const uint8_t block[SHA256_BLOCK_SIZE]);
+void sha256_padding_buffer(struct hash_context *ctx);
 
 struct sha512_state
 {
@@ -48,15 +40,7 @@ struct sha512_state
     uint64_t h7;
 };
 
-struct sha512_context
-{
-    struct sha512_state state;
-    size_t total_len;
-    uint8_t buffer[SHA512_BLOCK_SIZE];
-    size_t buffer_len;
-};
-
-void sha512_hash_update(void *ctx, const uint8_t *data, size_t len);
-void sha512_padding_buffer(struct sha512_context *sha256_ctx);
+void sha512_hash_process(struct hash_context *ctx, const uint8_t block[SHA512_BLOCK_SIZE]);
+void sha512_padding_buffer(struct hash_context *ctx);
 
 #endif // SHA_H
