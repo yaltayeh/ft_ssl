@@ -153,7 +153,7 @@ static void process_md5_block(struct md5_context *md5_ctx, const uint8_t block[B
         state.A = state.D;
         state.D = state.C;
         state.C = state.B;
-        state.B = state.B + leftrotate(res, S[i]);
+        state.B = state.B + leftrotate_32(res, S[i]);
     }
 
 

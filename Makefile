@@ -12,10 +12,13 @@ SRCS =	main.c						\
 	content_input.c					\
 	utils.c							\
 	output.c						\
+	hash_functions/hash_functions.c	\
+	hash_functions/run_hash.c		\
 	hash_functions/md5_hash.c		\
 	hash_functions/sha256_hash.c	\
-	hash_functions/run_hash.c		\
-	hash_functions/hash_functions.c
+	hash_functions/sha224_hash.c 	\
+	hash_functions/sha512_hash.c 	\
+	hash_functions/sha384_hash.c 	\
 
 OBJS = $(SRCS:%.c=$(BUILD_DIR)/%.o)
 

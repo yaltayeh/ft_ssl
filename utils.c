@@ -1,18 +1,31 @@
 #include "ft_ssl.h"
 
-uint32_t rightrotate(uint32_t val, int n)
-{
-	if (n % 32 == 0)
-		return (val); 
-	return ((val >> n) | (val << (32 - n))); 
-}
+#define rightrotate(bits)                                           \
+    uint##bits##_t rightrotate_##bits(uint##bits##_t val, int n)    \
+    {                                                               \
+        if (n % bits == 0)                                          \
+            return (val);                                           \
+        return ((val >> n) | (val << (bits - n)));                  \
+    }
 
-uint32_t leftrotate(uint32_t val, int n)
-{
-    if (n % 32 == 0)
-        return (val);
-    return ((val << n) | (val >> (32 - n)));
-}
+rightrotate(32)
+rightrotate(64)
+
+#undef rightrotate
+
+#define leftrotate(bits)                                        \
+    uint##bits##_t leftrotate_##bits(uint##bits##_t val, int n) \
+    {                                                           \
+        if (n % bits == 0)                                      \
+            return (val);                                       \
+        return ((val << n) | (val >> (bits - n)));              \
+    }
+
+leftrotate(32)
+leftrotate(64)
+
+#undef leftrotate
+
 
 void little_endian_encode(uint64_t value, uint8_t *output, size_t output_size)
 {

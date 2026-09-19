@@ -1,5 +1,6 @@
 #include "hash_functions.h"
 #include "../ft_ssl.h"
+#include "sha.h"
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
@@ -25,36 +26,11 @@ digest := hash := h0 append h1 append h2 append h3 append h4 append h5 append h6
 
 */
 
-#define SHA256_HASH_SIZE 32
-#define BLOCK_SIZE 64
-
 // Ch(e, f, g) = (e ∧ f) ⊕ (¬e ∧ g)
 #define Ch(e, f, g) ((e & f) | (~e & g))
 
 // Maj(a, b, c) = (a ∧ b) ⊕ (a ∧ c) ⊕ (b ∧ c)
 #define Maj(a, b, c) ((a & b) | (a & c) | (b & c))
-
-
-
-struct sha256_state
-{
-    uint32_t h0;
-    uint32_t h1;
-    uint32_t h2;
-    uint32_t h3;
-    uint32_t h4;
-    uint32_t h5;
-    uint32_t h6;
-    uint32_t h7;
-};
-
-struct sha256_context
-{
-    struct sha256_state state;
-    size_t total_len;
-    uint8_t buffer[BLOCK_SIZE];
-    size_t buffer_len;
-};
 
 /*
 Initialize array of round constants:
@@ -127,13 +103,13 @@ static void message_schedule(uint32_t w[64], const uint8_t block[64])
 
     for (size_t i = 16; i < 64; i++)
     {
-        uint32_t s0 = rightrotate(w[i-15], 7) ^ rightrotate(w[i-15], 18) ^ (w[i-15] >> 3);
-        uint32_t s1 = rightrotate(w[i-2], 17) ^ rightrotate(w[i-2],  19) ^ (w[i-2] >> 10);
+        uint32_t s0 = rightrotate_32(w[i-15], 7) ^ rightrotate_32(w[i-15], 18) ^ (w[i-15] >> 3);
+        uint32_t s1 = rightrotate_32(w[i-2], 17) ^ rightrotate_32(w[i-2],  19) ^ (w[i-2] >> 10);
         w[i] = w[i - 16] + s0 + w[i - 7] + s1;
     }
 }
 
-static void process_sha256_block(struct sha256_context *sha_ctx, const uint8_t block[BLOCK_SIZE])
+static void process_sha256_block(struct sha256_context *sha_ctx, const uint8_t block[SHA256_BLOCK_SIZE])
 {
     uint32_t w[64];
     message_schedule(w, block);
@@ -152,10 +128,10 @@ static void process_sha256_block(struct sha256_context *sha_ctx, const uint8_t b
     {
         uint32_t S1, S0, temp1, temp2;
 
-        S1 = rightrotate(e, 6) ^ rightrotate(e, 11) ^ rightrotate(e, 25);
+        S1 = rightrotate_32(e, 6) ^ rightrotate_32(e, 11) ^ rightrotate_32(e, 25);
         temp1 = h + S1 + Ch(e, f, g) + K[i] + w[i];
 
-        S0 = rightrotate(a, 2) ^ rightrotate(a, 13) ^ rightrotate(a, 22);
+        S0 = rightrotate_32(a, 2) ^ rightrotate_32(a, 13) ^ rightrotate_32(a, 22);
         temp2 = S0 + Maj(a, b, c);
 
         h = g;
@@ -178,31 +154,31 @@ static void process_sha256_block(struct sha256_context *sha_ctx, const uint8_t b
     sha_ctx->state.h7 += h;
 }
 
-static void sha256_hash_update(void *ctx, const uint8_t *data, size_t len)
+void sha256_hash_update(void *ctx, const uint8_t *data, size_t len)
 {
     struct sha256_context *sha_ctx = (struct sha256_context *)ctx;
     sha_ctx->total_len += len;
 
     if (sha_ctx->buffer_len > 0)
     {
-        size_t space_in_buffer = BLOCK_SIZE - sha_ctx->buffer_len;
+        size_t space_in_buffer = SHA256_BLOCK_SIZE - sha_ctx->buffer_len;
         size_t to_copy = (len < space_in_buffer) ? len : space_in_buffer;
         memcpy(sha_ctx->buffer + sha_ctx->buffer_len, data, to_copy);
         sha_ctx->buffer_len += to_copy;
         data += to_copy;
         len -= to_copy;
 
-        if (sha_ctx->buffer_len == BLOCK_SIZE)
+        if (sha_ctx->buffer_len == SHA256_BLOCK_SIZE)
         {
             process_sha256_block(sha_ctx, sha_ctx->buffer);
             sha_ctx->buffer_len = 0; // Reset buffer length after processing
         }
     }
-    while (len >= BLOCK_SIZE)
+    while (len >= SHA256_BLOCK_SIZE)
     {
         process_sha256_block(sha_ctx, data);
-        data += BLOCK_SIZE;
-        len -= BLOCK_SIZE; // Simulate processing a block
+        data += SHA256_BLOCK_SIZE;
+        len -= SHA256_BLOCK_SIZE;
     }
     if (len > 0)
     {
@@ -212,7 +188,7 @@ static void sha256_hash_update(void *ctx, const uint8_t *data, size_t len)
     }
 }
 
-static void padding_buffer(struct sha256_context *sha256_ctx)
+void sha256_padding_buffer(struct sha256_context *sha256_ctx)
 {
         size_t buffer_len = sha256_ctx->buffer_len;
 
@@ -221,14 +197,14 @@ static void padding_buffer(struct sha256_context *sha256_ctx)
     buffer[buffer_len] = 0x80; // Append the '1' bit
     buffer_len++;
 
-    if (buffer_len > BLOCK_SIZE - 8)
+    if (buffer_len > SHA256_BLOCK_SIZE - 8)
     {
-        memset(buffer + buffer_len, 0, BLOCK_SIZE - buffer_len);
+        memset(buffer + buffer_len, 0, SHA256_BLOCK_SIZE - buffer_len);
         process_sha256_block(sha256_ctx, buffer);
         buffer_len = 0; // Reset buffer length after processing
     }
-    memset(buffer + buffer_len, 0, BLOCK_SIZE - 8 - buffer_len);
-    buffer_len = BLOCK_SIZE - 8;
+    memset(buffer + buffer_len, 0, SHA256_BLOCK_SIZE - 8 - buffer_len);
+    buffer_len = SHA256_BLOCK_SIZE - 8;
 
     size_t total_len_bits = sha256_ctx->total_len * 8;
     big_endian_encode(total_len_bits, buffer + buffer_len, 8);
@@ -239,7 +215,7 @@ static void sha256_hash_final(void *ctx, uint8_t *output)
 {
     struct sha256_context *sha256_ctx = (struct sha256_context *)ctx;
 
-    padding_buffer(sha256_ctx);
+    sha256_padding_buffer(sha256_ctx);
 
     big_endian_encode(sha256_ctx->state.h0, output + 0, 4);
     big_endian_encode(sha256_ctx->state.h1, output + 4, 4);
@@ -258,6 +234,6 @@ const struct hash_function sha256_hash_function = {
     sha256_hash_update,
     sha256_hash_final,
     sizeof(struct sha256_context),
-    BLOCK_SIZE,
+    SHA256_BLOCK_SIZE,
     SHA256_HASH_SIZE
 };

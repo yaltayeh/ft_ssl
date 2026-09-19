@@ -55,8 +55,10 @@ void out_str(const char *s);
 void out_hex(const uint8_t *data, size_t len);
 void err_str(const char *s);
 
-uint32_t rightrotate(uint32_t val, int n);
-uint32_t leftrotate(uint32_t val, int n);
+uint32_t rightrotate_32(uint32_t val, int n);
+uint32_t leftrotate_32(uint32_t val, int n);
+uint64_t rightrotate_64(uint64_t val, int n);
+uint64_t leftrotate_64(uint64_t val, int n);
 void little_endian_encode(uint64_t value, uint8_t *output, size_t output_size);
 void big_endian_encode(uint64_t value, uint8_t *output, size_t output_size);
 
