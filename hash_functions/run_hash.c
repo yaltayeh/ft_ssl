@@ -162,7 +162,7 @@ void free_hash_context(struct hash_context *ctx)
     free(ctx);
 }
 
-int run_hash_function(struct hash_function *hash_func, struct content_input *ci,
+static int run_hash_function(struct hash_function *hash_func, struct content_input *ci,
                       struct flags *flags, const char *command)
 {
     
