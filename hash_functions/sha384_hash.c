@@ -52,12 +52,12 @@ static void sha384_hash_final(struct hash_context *ctx, uint8_t *output)
 }
 
 const struct hash_function sha384_hash_function = {
-    "sha384",
-    "SHA384",
-    sha384_hash_init,
-    sha512_hash_process,
-    sha384_hash_final,
-    sizeof(struct sha512_state),
-    SHA512_BLOCK_SIZE,
-    SHA384_HASH_SIZE
+    .func.name          = "sha384",
+    .func.display_name  = "SHA384",
+    .init               = sha384_hash_init,
+    .process            = sha512_hash_process,
+    .final              = sha384_hash_final,
+    .state_size         = sizeof(struct sha512_state),
+    .block_size         = SHA512_BLOCK_SIZE,
+    .output_size        = SHA384_HASH_SIZE
 };

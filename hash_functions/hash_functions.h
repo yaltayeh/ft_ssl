@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "../ssl_command.h"
+#include "../ssl_function.h"
 
 struct hash_context
 {
@@ -16,6 +16,7 @@ struct hash_context
 
 struct hash_function
 {
+    struct ssl_function func;
     void (*init)(struct hash_context *ctx);
     void (*process)(struct hash_context *ctx, const uint8_t *block);
     void (*final)(struct hash_context *ctx, uint8_t *output);
@@ -33,10 +34,8 @@ struct flags
     int r;
 };
 
-struct hash_function *get_hash_function_by_name(const char *name);
-const struct hash_function **get_hash_function_list(void);
-
-int run_hash(struct hash_function *hash_func, const char *command, int argc,
-             char **argv);
+int run_hash(const struct ssl_function *func,
+				int optc,
+				char **optv);
 
 #endif /* HASH_FUNCTIONS_H */

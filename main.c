@@ -1,8 +1,8 @@
 #include "ft_ssl.h"
+#include "ssl_function.h"
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
-#include "hash_functions/hash_functions.h"
 
 static void print_usage(void)
 {
@@ -11,31 +11,40 @@ static void print_usage(void)
 
 static void print_invalid_command(const char *command)
 {
-    const struct hash_function **list = get_hash_function_list();
+    const struct ssl_functions_group **list = get_ssl_group_list();
 
     err_str("ft_ssl: Error: '");
     err_str(command);
-    err_str("' is an invalid command.\n\nCommands:\n");
-    for (size_t i = 0; list[i] != NULL; i++)
+    err_str("' is an invalid command.\n\n");
+    for (size_t i = 0; list[i]; i++)
     {
-        err_str(list[i]->name);
+        err_str(list[i]->title);
+        err_str(":\n");
+        for (size_t j = 0; list[i]->functions && list[i]->functions[j]; j++)
+        {
+            err_str(list[i]->functions[j]->name);
+            err_str("\n");
+        }
         err_str("\n");
     }
-    err_str("\nFlags:\n-p -q -r -s\n");
 }
 
 int main(int argc, char **argv)
 {
+    const struct ssl_functions_group *group = NULL;
+    const struct ssl_function        *func  = NULL;
+
     if (argc < 2)
     {
         print_usage();
         return (1);
     }
 
-    struct hash_function *hash_func = get_hash_function_by_name(argv[1]);
-    if (hash_func)
-        return (run_hash(hash_func, argv[1], argc - 2, argv + 2));
-
+    if (get_function_by_name(argv[1], &group, &func))
+    {
+        return(group->run(func, argc - 2, argv + 2));
+    }
+    
     print_invalid_command(argv[1]);
 
     return (1);

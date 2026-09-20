@@ -191,12 +191,12 @@ static void sha256_hash_final(struct hash_context *ctx, uint8_t *output)
 }
 
 const struct hash_function sha256_hash_function = {
-    "sha256",
-    "SHA256",
-    sha256_hash_init,
-    sha256_hash_process,
-    sha256_hash_final,
-    sizeof(struct sha256_state),
-    SHA256_BLOCK_SIZE,
-    SHA256_HASH_SIZE
+    .func.name          = "sha256",
+    .func.display_name  = "SHA256",
+    .init               = sha256_hash_init,
+    .process            = sha256_hash_process,
+    .final              = sha256_hash_final,
+    .state_size         = sizeof(struct sha256_state),
+    .block_size         = SHA256_BLOCK_SIZE,
+    .output_size        = SHA256_HASH_SIZE
 };

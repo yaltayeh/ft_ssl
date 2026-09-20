@@ -25,7 +25,7 @@ static void print_entry_error(const char *command, const char *entry, int err)
 ** and without -p it is (stdin)= <hash>. The -p + -q pair is a separate format
 ** entirely: the raw STDIN bytes on their own line, then the bare digest.
 */
-static void print_stdin_output(struct hash_function *hash_func, uint8_t *output,
+static void print_stdin_output(const struct hash_function *hash_func, uint8_t *output,
                                struct flags *flags)
 {
     const char *content = get_store_buffer();
@@ -58,7 +58,7 @@ static void print_stdin_output(struct hash_function *hash_func, uint8_t *output,
     out_str("\n");
 }
 
-static void print_file_or_string_output(struct hash_function *hash_func,
+static void print_file_or_string_output(const struct hash_function *hash_func,
                                         struct content_input *ci,
                                         uint8_t *output, struct flags *flags)
 {
@@ -86,7 +86,7 @@ static void print_file_or_string_output(struct hash_function *hash_func,
         return;
     }
 
-    out_str(hash_func->display_name);
+    out_str(hash_func->func.display_name);
     out_str(" (");
     if (!is_file)
         out_str("\"");
@@ -98,7 +98,7 @@ static void print_file_or_string_output(struct hash_function *hash_func,
     out_str("\n");
 }
 
-static void print_ouput(struct hash_function *hash_func, struct content_input *ci,
+static void print_ouput(const struct hash_function *hash_func, struct content_input *ci,
                         uint8_t *output, struct flags *flags)
 {
     if (ci->type == CONTENT_TYPE_FILE && ci->u.file.is_stdin)
@@ -107,7 +107,7 @@ static void print_ouput(struct hash_function *hash_func, struct content_input *c
         print_file_or_string_output(hash_func, ci, output, flags);
 }
 
-static void run_hash_update(struct hash_function *hash_func, struct hash_context *ctx, const uint8_t *data, size_t len)
+static void run_hash_update(const struct hash_function *hash_func, struct hash_context *ctx, const uint8_t *data, size_t len)
 {
     ctx->total_len += len;
 
@@ -140,7 +140,7 @@ static void run_hash_update(struct hash_function *hash_func, struct hash_context
     }
 }
 
-struct hash_context *init_hash_context(struct hash_function *hash_func)
+struct hash_context *init_hash_context(const struct hash_function *hash_func)
 {
     size_t total_size = sizeof(struct hash_context) + hash_func->state_size + hash_func->block_size;
 
@@ -162,8 +162,8 @@ void free_hash_context(struct hash_context *ctx)
     free(ctx);
 }
 
-static int run_hash_function(struct hash_function *hash_func, struct content_input *ci,
-                      struct flags *flags, const char *command)
+static int run_hash_function(const struct hash_function *hash_func, struct content_input *ci,
+                      struct flags *flags)
 {
     
     struct hash_context *ctx;
@@ -196,9 +196,9 @@ static int run_hash_function(struct hash_function *hash_func, struct content_inp
         int err = errno ? errno : EIO;
 
         if (ci->type == CONTENT_TYPE_FILE)
-            print_entry_error(command, ci->u.file.filename, err);
+            print_entry_error(hash_func->func.name, ci->u.file.filename, err);
         else
-            print_entry_error(command, ci->u.string.string, err);
+            print_entry_error(hash_func->func.name, ci->u.string.string, err);
 
         if (store_data)
             disable_store_buffer();
@@ -218,9 +218,12 @@ static int run_hash_function(struct hash_function *hash_func, struct content_inp
     return (0);
 }
 
-int run_hash(struct hash_function *hash_func, const char *command, int optc,
-             char **optv)
+int run_hash(const struct ssl_function *func,
+				int optc,
+				char **optv)
 {
+    const struct hash_function *hash_func = (const struct hash_function *)func;
+
     struct flags flags = {0, 0, 0};
     struct content_input *ci = NULL;
     struct content_input *last_ci = NULL;
@@ -301,7 +304,7 @@ int run_hash(struct hash_function *hash_func, const char *command, int optc,
     {
         struct content_input *next = ci->next;
 
-        if (run_hash_function(hash_func, ci, &flags, command) != 0)
+        if (run_hash_function(hash_func, ci, &flags) != 0)
             status = 1;
 
         ci->next = NULL; /* detach before freeing: free_ci frees the whole tail */

@@ -42,12 +42,12 @@ static void sha224_hash_final(struct hash_context *ctx, uint8_t *output)
 }
 
 const struct hash_function sha224_hash_function = {
-    "sha224",
-    "SHA224",
-    sha224_hash_init,
-    sha256_hash_process,
-    sha224_hash_final,
-    sizeof(struct sha256_state),
-    SHA256_BLOCK_SIZE,
-    SHA224_HASH_SIZE
+    .func.name          = "sha224",
+    .func.display_name  = "SHA224",
+    .init               = sha224_hash_init,
+    .process            = sha256_hash_process,
+    .final              = sha224_hash_final,
+    .state_size         = sizeof(struct sha256_state),
+    .block_size         = SHA256_BLOCK_SIZE,
+    .output_size        = SHA224_HASH_SIZE
 };

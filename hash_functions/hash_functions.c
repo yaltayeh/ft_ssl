@@ -16,17 +16,8 @@ static const struct hash_function *hash_functions[] = {
     NULL
 };
 
-const struct hash_function **get_hash_function_list(void)
-{
-    return (const struct hash_function **)hash_functions;
-}
-
-struct hash_function *get_hash_function_by_name(const char *name)
-{
-    for (size_t i = 0; hash_functions[i] != NULL; i++)
-    {
-        if (strcmp(hash_functions[i]->name, name) == 0)
-            return (struct hash_function *)hash_functions[i];
-    }
-    return NULL;
-}
+const struct ssl_functions_group hash_group = {
+    "Message Digest command",
+    (const struct ssl_function **)hash_functions,
+    .run = run_hash 
+};

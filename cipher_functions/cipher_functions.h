@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "ssl_function.h"
 
 struct cipher_context
 {
@@ -16,8 +17,7 @@ struct cipher_context
 
 struct cipher_function
 {
-    const char *name;
-    const char *display_name;
+    struct ssl_function func;
     int need_passphrase;
 
     void (*init)(struct cipher_context *ctx);

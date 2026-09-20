@@ -188,17 +188,12 @@ static void md5_final(struct hash_context *ctx, uint8_t *output)
 }
 
 const struct hash_function md5_hash_function = {
-    md5_init,
-    md5_process_block,
-    md5_final,
-    sizeof(struct md5_state),
-    BLOCK_SIZE,
-    MD5_HASH_SIZE
-};
-
-const struct ssl_command md5_command = {
-    "md5",
-    "MD5",
-    HASH_FUNC,
-    &md5_hash_function,
+    .func.name          = "md5",
+    .func.display_name  = "MD5",
+    .init               = md5_init,
+    .process            = md5_process_block,
+    .final              = md5_final,
+    .state_size         = sizeof(struct md5_state),
+    .block_size         = BLOCK_SIZE,
+    .output_size        = MD5_HASH_SIZE
 };

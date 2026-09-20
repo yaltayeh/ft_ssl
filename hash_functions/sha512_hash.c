@@ -200,12 +200,12 @@ static void sha512_hash_final(struct hash_context *ctx, uint8_t *output)
 }
 
 const struct hash_function sha512_hash_function = {
-    "sha512",
-    "SHA512",
-    sha512_hash_init,
-    sha512_hash_process,
-    sha512_hash_final,
-    sizeof(struct sha512_state),
-    SHA512_BLOCK_SIZE,
-    SHA512_HASH_SIZE
+    .func.name          = "sha512",
+    .func.display_name  = "SHA512",
+    .init               = sha512_hash_init,
+    .process            = sha512_hash_process,
+    .final              = sha512_hash_final,
+    .state_size         = sizeof(struct sha512_state),
+    .block_size         = SHA512_BLOCK_SIZE,
+    .output_size        = SHA512_HASH_SIZE
 };

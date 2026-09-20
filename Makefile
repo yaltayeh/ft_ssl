@@ -12,6 +12,7 @@ SRCS =	main.c						\
 	content_input.c					\
 	utils.c							\
 	output.c						\
+	ssl_function.c					\
 	hash_functions/hash_functions.c	\
 	hash_functions/run_hash.c		\
 	hash_functions/md5_hash.c		\
@@ -28,7 +29,7 @@ $(NAME): $(OBJS)
 	$(CC) -o $(NAME) $(OBJS) $(LDFLAGS)
 
 $(BUILD_DIR)/%.o: %.c
-	mkdir -p $(dir $@)
+	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
