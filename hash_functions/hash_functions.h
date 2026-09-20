@@ -25,8 +25,6 @@ struct hash_function
     uint8_t output_size;
 };
 
-#define HASH_FUNC {1, run_hash}
-
 struct flags
 {
     int p;
