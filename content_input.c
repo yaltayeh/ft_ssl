@@ -170,16 +170,19 @@ ssize_t read_ci(struct content_input *input, char *buffer, size_t len)
                 return (-1);
             input->u.file.is_open = 1;
         }
-        int bytes_read = read(input->u.file.fd, buffer, len);
-        if (bytes_read < 0)
-            return (-1);
-        if (is_store_buffer_enabled)
+        size_t total_len = 0;
+        ssize_t nbytes = 0;
+        while (total_len < len && (nbytes = read(input->u.file.fd, buffer + total_len, len - total_len)) > 0)
+            total_len += nbytes;
+        if (is_store_buffer_enabled && total_len > 0)
         {
-            char *stored = add_to_store_buffer(buffer, bytes_read);
+            char *stored = add_to_store_buffer(buffer, total_len);
             if (!stored)
                 return (-1);
         }
-        return bytes_read;
+        if (nbytes < 0)
+            return (-1);
+        return (total_len);
     }
     else if (input->type == CONTENT_TYPE_STRING)
     {

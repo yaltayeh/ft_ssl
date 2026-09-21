@@ -10,7 +10,7 @@
 ** Same error-reporting shape as run_hash's print_entry_error:
 ** ft_ssl: <command>: <entry>: <reason>
 */
-static void print_cipher_error(const char *command, const char *entry, int err)
+static void print_cryption_error(const char *command, const char *entry, int err)
 {
     err_str("ft_ssl: ");
     err_str(command);
@@ -42,7 +42,7 @@ static void parse_hex_into(const char *hex, uint8_t *out, size_t out_len)
 struct cryption_flags
 {
     int         decrypt;       /* -d given (default is encrypt) */
-    int         base64;        /* -a: base64 the ciphertext side */
+    int         base64;        /* -a: base64 the cryptiontext side */
     const char *input_path;    /* -i, NULL means stdin */
     const char *output_path;   /* -o, NULL means stdout */
     const char *key_hex;       /* -k, NULL if not given */
@@ -58,7 +58,7 @@ struct cryption_flags
 ** stdin/stdout - so there's no getopt-style "stop at the first filename"
 ** rule to apply; every flag is recognised wherever it appears.
 */
-static int parse_cipher_flags(int optc, char **optv, struct cryption_flags *flags)
+static int parse_cryption_flags(int optc, char **optv, struct cryption_flags *flags)
 {
     memset(flags, 0, sizeof(*flags));
 
@@ -118,133 +118,157 @@ static int resolve_key(const struct cryption_flags *flags, uint8_t key[8])
     return (0);
 }
 
-/*
-** DES padding is unrelated to hash padding: every byte of pad, including a
-** full extra block when the plaintext is already block-aligned, has the
-** *count* of padding bytes as its value (PKCS#5-style). Only used when
-** encrypting; decrypting removes it by reading the last output byte.
-*/
-static size_t pad_last_block(uint8_t *block, size_t used, size_t block_size)
+static void xor_block(uint8_t *dst, const uint8_t *src, size_t len)
 {
-    uint8_t pad_len = (uint8_t)(block_size - used);
-    for (size_t i = used; i < block_size; i++)
-        block[i] = pad_len;
-    return (block_size);
+    for (size_t i = 0; i < len; i++)
+        dst[i] ^= src[i];
 }
 
-static size_t unpad_last_block(uint8_t *block, size_t block_size)
+static int run_encryption_stream(const struct cryption_function *cryption_func,
+                                    struct content_input *input,
+                                    struct cryption_context *ctx,
+                                    uint8_t prev_block[8],
+                                    int output_fd)
 {
-    uint8_t pad_len = block[block_size - 1];
-    if (pad_len == 0 || pad_len > block_size)
-        return (block_size); /* malformed padding: emit as-is rather than crash */
-    return (block_size - pad_len);
+    uint8_t block[8];
+    uint8_t out_block[8];
+
+    while (1)
+    {
+        ssize_t n = read_ci(input, (char *)block, 8);
+        if (n < 0)
+            return (-1);
+
+        if (n < 8)
+        {
+            uint8_t pad_len = (uint8_t)(8 - n);
+            for (ssize_t i = n; i < 8; i++)
+                block[i] = pad_len;
+        }
+
+        if (cryption_func->needs_iv)
+            xor_block(block, prev_block, 8);
+
+        cryption_func->encrypt(ctx, block, out_block);
+
+        if (cryption_func->needs_iv)
+            memcpy(prev_block, out_block, 8);
+
+        write(output_fd, out_block, 8);
+
+        if (n < 8)
+            break; /* that was the (now padded) final block */
+    }
+    return (0);
 }
 
-/*
-** Processes one whole stream (file or stdin -> file or stdout), one block
-** at a time, writing each block's result immediately - unlike hashing,
-** there is no single final digest to wait for. CBC's chaining is handled
-** here (cryption_func->needs_iv), not inside the DES core itself: the IV
-** is this function's business, not the algorithm's, exactly like flags
-** belongs to run_hash and not to hash_context.
-*/
+static int run_decryption_stream(const struct cryption_function *cryption_func,
+                                    struct content_input *input,
+                                    struct cryption_context *ctx,
+                                    uint8_t prev_block[8],
+                                    int output_fd)
+{
+    /* DECRYPT: ciphertext is always a multiple of 8 bytes, so every
+    ** read_ci call returns exactly 8 (a real block) or 0 (done) - never
+    ** something in between. That means we can't tell whether a given
+    ** 8-byte block is the last one until the *next* read confirms EOF.
+    ** One-block lookahead is unavoidable here, unlike encryption. */
+    uint8_t block[8];
+    uint8_t out_block[8];
+    uint8_t pending[8];
+    int have_pending = 0;
+    
+    while (1)
+    {
+        ssize_t n = read_ci(input, (char *)block, 8);
+        if (n < 0)
+            return (-1);
+
+        if (n == 0)
+            break; /* nothing new; `pending` (if any) is the final block */
+
+        if (n != 8)
+        {
+            /* malformed ciphertext: not a multiple of the block size */
+            err_str("ft_ssl: Error: ciphertext is not a multiple of the block size\n");
+            return (-2);
+        }
+
+        if (have_pending)
+        {
+            /* pending is confirmed NOT last: decrypt & write it as-is */
+            uint8_t decrypted_prev[8];
+            cryption_func->decrypt(ctx, pending, decrypted_prev);
+            if (cryption_func->needs_iv)
+            {
+                xor_block(decrypted_prev, prev_block, 8);
+                memcpy(prev_block, pending, 8);
+            }
+            write(output_fd, decrypted_prev, 8);
+        }
+
+        memcpy(pending, block, 8);
+        have_pending = 1;
+    }
+
+    if (have_pending)
+    {
+        /* pending is now confirmed to be the final block: decrypt it
+        ** and strip its padding. */
+        cryption_func->decrypt(ctx, pending, out_block);
+        if (cryption_func->needs_iv)
+            xor_block(out_block, prev_block, 8);
+
+        uint8_t pad_len = out_block[7];
+        size_t out_len = (pad_len >= 1 && pad_len <= 8) ? (8 - pad_len) : 8;
+
+        write(output_fd, out_block, out_len);
+    }
+    return (0);
+}
+
 static int run_cryption_stream(const struct cryption_function *cryption_func,
                                 struct content_input *input, int output_fd,
                                 const uint8_t *key, uint8_t iv[8], int decrypt)
 {
-    void *ctx_mem = malloc(cryption_func->state_size);
-    if (!ctx_mem)
+    void *state = malloc(cryption_func->state_size);
+    if (!state)
     {
         err_str("ft_ssl: Error: Memory allocation failed\n");
         return (1);
     }
-    struct cryption_context ctx = { .state = ctx_mem };
+    struct cryption_context ctx = { .state = state };
     cryption_func->init(&ctx, key);
 
-    uint8_t block[8];
-    uint8_t out_block[8];
-    uint8_t prev_block[8]; /* holds the previous ciphertext block for CBC */
-    int have_prev = 0;
-
+    uint8_t prev_block[8];
     if (cryption_func->needs_iv)
-    {
         memcpy(prev_block, iv, 8);
-        have_prev = 1;
-    }
 
-    ssize_t n;
-    size_t buffered = 0;
-    errno = 0;
+    int status = 0;
+    if (decrypt)
+        status = run_decryption_stream(cryption_func, input, &ctx, prev_block, output_fd);
+    else
+        status = run_encryption_stream(cryption_func, input, &ctx, prev_block, output_fd);
 
-    while ((n = read_ci(input, (char *)block + buffered, 8 - buffered)) > 0 || buffered > 0)
-    {
-        buffered += (n > 0) ? (size_t)n : 0;
-        if (buffered < 8 && n > 0)
-            continue; /* keep filling this block */
-
-        /* peek whether more data follows, to know if THIS block is last */
-        char probe;
-        ssize_t peek = 0;
-        if (buffered == 8)
-            peek = read_ci(input, &probe, 0); /* 0-length probe: see notes below */
-
-        if (!decrypt && buffered < 8)
-            buffered = pad_last_block(block, buffered, 8);
-
-        if (decrypt)
-        {
-            if (cryption_func->needs_iv)
-            {
-                cryption_func->decrypt(&ctx, block, out_block);
-                for (int i = 0; i < 8; i++)
-                    out_block[i] ^= prev_block[i];
-                memcpy(prev_block, block, 8);
-            }
-            else
-            {
-                cryption_func->decrypt(&ctx, block, out_block);
-            }
-        }
-        else
-        {
-            uint8_t to_encrypt[8];
-            memcpy(to_encrypt, block, 8);
-            if (cryption_func->needs_iv)
-                for (int i = 0; i < 8; i++)
-                    to_encrypt[i] ^= prev_block[i];
-
-            cryption_func->encrypt(&ctx, to_encrypt, out_block);
-
-            if (cryption_func->needs_iv)
-                memcpy(prev_block, out_block, 8);
-        }
-
-        size_t out_len = 8;
-        if (decrypt && peek == 0) /* this was the last block: strip padding */
-            out_len = unpad_last_block(out_block, 8);
-
-        write(output_fd, out_block, out_len);
-        buffered = 0;
-        (void)have_prev;
-    }
-
-    free(ctx_mem);
-
-    if (n < 0)
+    free(state);
+    if (status == -1)
     {
         int err = errno ? errno : EIO;
-        print_cipher_error(cryption_func->func.name, "read", err);
-        return (1);
+        print_cryption_error(cryption_func->func.name, "read", err);
+        return (-1);
     }
+    else if (state == -2)
+        return (-1);
     return (0);
 }
+
 
 int run_cryption(const struct ssl_function *func, int optc, char **optv)
 {
     const struct cryption_function *cryption_func = (const struct cryption_function *)func;
 
     struct cryption_flags flags;
-    if (!parse_cipher_flags(optc, optv, &flags))
+    if (!parse_cryption_flags(optc, optv, &flags))
         return (1);
 
     uint8_t key[8];
@@ -260,7 +284,7 @@ int run_cryption(const struct ssl_function *func, int optc, char **optv)
         : create_ci_from_stdin();
     if (!input)
     {
-        print_cipher_error(cryption_func->func.name,
+        print_cryption_error(cryption_func->func.name,
                             flags.input_path ? flags.input_path : "stdin", errno);
         return (1);
     }
@@ -271,7 +295,7 @@ int run_cryption(const struct ssl_function *func, int optc, char **optv)
         output_fd = open(flags.output_path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
         if (output_fd < 0)
         {
-            print_cipher_error(cryption_func->func.name, flags.output_path, errno);
+            print_cryption_error(cryption_func->func.name, flags.output_path, errno);
             free_ci(input);
             return (1);
         }

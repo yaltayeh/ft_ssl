@@ -8,10 +8,6 @@
 struct cryption_context
 {
     void        *state;
-
-    size_t      total_len;
-    uint8_t     *buffer;
-    size_t      buffer_len;
 };
 
 struct cryption_function
