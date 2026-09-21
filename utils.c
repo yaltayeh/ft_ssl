@@ -1,7 +1,5 @@
 #include "ft_ssl.h"
 
-// uint64_t rightrotate(uint64_t)
-
 uint64_t permutation(uint64_t input, const uint8_t *table,
                              size_t table_size, size_t input_bit_width)
 {
@@ -18,12 +16,9 @@ uint64_t permutation(uint64_t input, const uint8_t *table,
 
 uint64_t rightrotate(uint64_t val, size_t n, size_t size)
 {
-    uint64_t mask;
+    uint64_t mask = 0xFFFFFFFFFFFFFFFFULL;
 
-    if (size >= 64)
-        mask = ~0ULL;
-    else
-        mask = (1ULL << size) - 1;
+    mask = mask >> (64 - size);
 
     val &= mask;
     n %= size;
@@ -35,13 +30,9 @@ uint64_t rightrotate(uint64_t val, size_t n, size_t size)
 
 uint64_t leftrotate(uint64_t val, size_t n, size_t size)
 {
-    uint64_t mask;
+    uint64_t mask = 0xFFFFFFFFFFFFFFFFULL;
 
-    if (size >= 64)
-        mask = ~0ULL;
-    else
-        mask = (1ULL << size) - 1;
-
+    mask = mask >> (64 - size);
     val &= mask;
     n %= size;
     if (n == 0)
