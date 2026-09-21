@@ -59,6 +59,8 @@ uint64_t rightrotate(uint64_t val, size_t n, size_t size);
 uint64_t leftrotate(uint64_t val, size_t n, size_t size);
 void little_endian_encode(uint64_t value, uint8_t *output, size_t output_size);
 void big_endian_encode(uint64_t value, uint8_t *output, size_t output_size);
+uint64_t little_endian_decode(const uint8_t bytes[8], size_t nbytes);
+uint64_t big_endian_decode(const uint8_t bytes[8], size_t nbytes);
 uint64_t permutation(uint64_t input, const uint8_t *table,
                              size_t table_size, size_t input_bit_width);
 

@@ -3,9 +3,11 @@
 #include <string.h>
 
 extern const struct ssl_functions_group hash_group;
+extern const struct ssl_functions_group cryption_group;
 
 const struct ssl_functions_group *ssl_groups[] = {
     &hash_group,
+    &cryption_group,
     NULL
 };
 

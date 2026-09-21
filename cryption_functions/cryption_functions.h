@@ -3,13 +3,11 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "ssl_function.h"
+#include "../ssl_function.h"
 
 struct cryption_context
 {
     void        *state;
-    uint8_t     *key;
-    size_t      key_size;
 
     size_t      total_len;
     uint8_t     *buffer;
@@ -20,12 +18,14 @@ struct cryption_function
 {
     struct ssl_function func;
 
-    void (*init)(struct cryption_context *ctx);
+    void (*init)(struct cryption_context *ctx, const uint8_t *raw_key);
     void (*decrypt)(struct cryption_context *ctx, const uint8_t *cipher, uint8_t *plain);
     void (*encrypt)(struct cryption_context *ctx, const uint8_t *plain, uint8_t *cipher);
     
+    size_t key_size;
     size_t state_size;
     size_t block_size;
+    int    needs_iv;
 };
 
 // enum modes
@@ -41,7 +41,7 @@ struct cryption_function
 //     char *output;
 // };
 
-int run_cryption(struct ssl_function *cipher_func,
+int run_cryption(const struct ssl_function *func,
                 int optc,
                 char **optv);
 

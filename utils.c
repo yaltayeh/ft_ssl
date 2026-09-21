@@ -58,3 +58,23 @@ void big_endian_encode(uint64_t value, uint8_t *output, size_t output_size)
         value >>= 8;
     }
 }
+
+uint64_t little_endian_decode(const uint8_t bytes[8], size_t nbytes)
+{
+    uint64_t value = 0;
+    for (size_t i = 0; i < nbytes; i++)
+    {
+        value |= ((uint64_t)bytes[i]) << (8 * i);
+    }
+    return (value);
+}
+
+uint64_t big_endian_decode(const uint8_t bytes[8], size_t nbytes)
+{
+    uint64_t value = 0;
+    for (size_t i = 0; i < nbytes; i++)
+    {
+        value = (value << 8) | bytes[i];
+    }
+    return (value);
+}
