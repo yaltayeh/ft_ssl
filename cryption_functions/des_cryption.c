@@ -248,13 +248,26 @@ static void des_decrypt(struct cryption_context *ctx, const uint8_t *cipher, uin
     big_endian_encode(plain_block, plain, BLOCK_SIZE);
 }
 
-const struct cryption_function des_cryption_function = {
-	.func.name			= "des",
-	.func.display_name	= "DES",
-	.init				= des_init,
-	.encrypt			= des_encrypt,
-	.decrypt			= des_decrypt,
-	.key_size			= KEY_SIZE,
-	.state_size			= sizeof(struct des_state),
-	.block_size			= BLOCK_SIZE,
+const struct cryption_function des_ecb_cryption_function = {
+    .func.name         = "des-ecb",
+    .func.display_name = "DES-ECB",
+    .init              = des_init,
+    .encrypt           = des_encrypt,
+    .decrypt           = des_decrypt,
+    .key_size          = KEY_SIZE,
+    .state_size        = sizeof(struct des_state),
+    .block_size        = BLOCK_SIZE,
+    .needs_iv          = 0,
+};
+
+const struct cryption_function des_cbc_cryption_function = {
+    .func.name         = "des-cbc",
+    .func.display_name = "DES-CBC",
+    .init              = des_init,       // نفس init بالضبط!
+    .encrypt           = des_encrypt,    // نفس encrypt بالضبط!
+    .decrypt           = des_decrypt,    // نفس decrypt بالضبط!
+    .key_size          = KEY_SIZE,
+    .state_size        = sizeof(struct des_state),
+    .block_size        = BLOCK_SIZE,
+    .needs_iv          = 1,              // ← الفرق الوحيد!
 };

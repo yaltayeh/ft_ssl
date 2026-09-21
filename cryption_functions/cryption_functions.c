@@ -1,10 +1,12 @@
 #include <string.h>
 #include "cryption_functions.h"
 
-extern const struct cryption_function des_cryption_function;
+extern const struct cryption_function des_ecb_cryption_function;
+extern const struct cryption_function des_cbc_cryption_function;
 
 const struct cryption_function *cryption_functions[] = {
-    &des_cryption_function,
+    &des_ecb_cryption_function,
+    &des_cbc_cryption_function,
     NULL
 };
 
