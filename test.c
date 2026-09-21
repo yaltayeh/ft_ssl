@@ -13,19 +13,7 @@ const uint8_t PC1[] = {
 	21, 13, 5,  28, 20, 12, 4
 };
 
-static uint64_t permutation(uint64_t input, const uint8_t *table,
-                             size_t table_size, size_t input_bit_width)
-{
-    uint64_t result = 0;
 
-    for (size_t i = 0; i < table_size; i++)
-    {
-        size_t bit_position = input_bit_width - table[i];
-        uint64_t bit = (input >> bit_position) & 1;
-        result = (result << 1) | bit;
-    }
-    return result;
-}
 
 int main()
 {

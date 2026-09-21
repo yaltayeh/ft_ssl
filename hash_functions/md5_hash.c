@@ -143,7 +143,7 @@ static void md5_process_block(struct hash_context *ctx, const uint8_t block[BLOC
         state.A = state.D;
         state.D = state.C;
         state.C = state.B;
-        state.B = state.B + leftrotate_32(res, S[i]);
+        state.B = state.B + leftrotate(res, S[i], 32);
     }
 
     // Update the state with the processed values

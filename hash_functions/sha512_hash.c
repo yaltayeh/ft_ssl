@@ -109,8 +109,8 @@ static void message_schedule(uint64_t w[80], const uint8_t block[SHA512_BLOCK_SI
 
     for (size_t i = 16; i < 80; i++)
     {
-        uint64_t s0 = rightrotate_64(w[i-15], 1) ^ rightrotate_64(w[i-15], 8) ^ (w[i-15] >> 7);
-        uint64_t s1 = rightrotate_64(w[i-2], 19) ^ rightrotate_64(w[i-2],  61) ^ (w[i-2] >> 6);
+        uint64_t s0 = rightrotate(w[i-15], 1, 64) ^ rightrotate(w[i-15], 8, 64) ^ (w[i-15] >> 7);
+        uint64_t s1 = rightrotate(w[i-2], 19, 64) ^ rightrotate(w[i-2],  61, 64) ^ (w[i-2] >> 6);
         w[i] = w[i - 16] + s0 + w[i - 7] + s1;
     }
 }
@@ -134,10 +134,10 @@ void sha512_hash_process(struct hash_context *ctx, const uint8_t block[SHA512_BL
     {
         uint64_t S1, S0, temp1, temp2;
 
-        S1 = rightrotate_64(e, 14) ^ rightrotate_64(e, 18) ^ rightrotate_64(e, 41);
+        S1 = rightrotate(e, 14, 64) ^ rightrotate(e, 18, 64) ^ rightrotate(e, 41, 64);
         temp1 = h + S1 + Ch(e, f, g) + K[i] + w[i];
 
-        S0 = rightrotate_64(a, 28) ^ rightrotate_64(a, 34) ^ rightrotate_64(a, 39);
+        S0 = rightrotate(a, 28, 64) ^ rightrotate(a, 34, 64) ^ rightrotate(a, 39, 64);
         temp2 = S0 + Maj(a, b, c);
 
         h = g;
