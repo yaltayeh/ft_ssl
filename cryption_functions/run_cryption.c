@@ -39,7 +39,7 @@ static void parse_hex_into(const char *hex, uint8_t *out, size_t out_len)
     }
 }
 
-struct cipher_flags
+struct cryption_flags
 {
     int         decrypt;       /* -d given (default is encrypt) */
     int         base64;        /* -a: base64 the ciphertext side */
@@ -58,7 +58,7 @@ struct cipher_flags
 ** stdin/stdout - so there's no getopt-style "stop at the first filename"
 ** rule to apply; every flag is recognised wherever it appears.
 */
-static int parse_cipher_flags(int optc, char **optv, struct cipher_flags *flags)
+static int parse_cipher_flags(int optc, char **optv, struct cryption_flags *flags)
 {
     memset(flags, 0, sizeof(*flags));
 
@@ -100,7 +100,7 @@ static int parse_cipher_flags(int optc, char **optv, struct cipher_flags *flags)
 ** implemented yet - both currently fall through to a stub that must be
 ** replaced before this is usable end-to-end; -k works today.
 */
-static int resolve_key(const struct cipher_flags *flags, uint8_t key[8])
+static int resolve_key(const struct cryption_flags *flags, uint8_t key[8])
 {
     if (flags->key_hex)
     {
@@ -243,7 +243,7 @@ int run_cryption(const struct ssl_function *func, int optc, char **optv)
 {
     const struct cryption_function *cryption_func = (const struct cryption_function *)func;
 
-    struct cipher_flags flags;
+    struct cryption_flags flags;
     if (!parse_cipher_flags(optc, optv, &flags))
         return (1);
 

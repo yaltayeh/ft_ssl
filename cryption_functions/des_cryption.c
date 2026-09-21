@@ -263,11 +263,11 @@ const struct cryption_function des_ecb_cryption_function = {
 const struct cryption_function des_cbc_cryption_function = {
     .func.name         = "des-cbc",
     .func.display_name = "DES-CBC",
-    .init              = des_init,       // نفس init بالضبط!
-    .encrypt           = des_encrypt,    // نفس encrypt بالضبط!
-    .decrypt           = des_decrypt,    // نفس decrypt بالضبط!
+    .init              = des_init,
+    .encrypt           = des_encrypt,
+    .decrypt           = des_decrypt,
     .key_size          = KEY_SIZE,
     .state_size        = sizeof(struct des_state),
     .block_size        = BLOCK_SIZE,
-    .needs_iv          = 1,              // ← الفرق الوحيد!
+    .needs_iv          = 1,
 };
