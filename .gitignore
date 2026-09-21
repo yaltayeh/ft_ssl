@@ -4,5 +4,4 @@ build
 
 Dockerfile
 build.sh
-tests
 tests.logs
