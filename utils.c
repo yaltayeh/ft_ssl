@@ -1,5 +1,7 @@
 #include "ft_ssl.h"
 
+// uint64_t rightrotate(uint64_t)
+
 #define rightrotate(bits)                                           \
     uint##bits##_t rightrotate_##bits(uint##bits##_t val, int n)    \
     {                                                               \

@@ -1,5 +1,5 @@
-#ifndef CIPHER_FUNCTIONS_H
-#define CIPHER_FUNCTIONS_H
+#ifndef CRYPTION_FUNCTIONS_H
+#define CRYPTION_FUNCTIONS_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -7,12 +7,13 @@
 
 struct cryption_context
 {
-    void    *state;
-    uint8_t *passphrase;
+    void        *state;
+    uint8_t     *key;
+    size_t      key_size;
 
-    size_t  total_len;
-    uint8_t *buffer;
-    size_t  buffer_len;
+    size_t      total_len;
+    uint8_t     *buffer;
+    size_t      buffer_len;
 };
 
 struct cryption_function
@@ -27,21 +28,21 @@ struct cryption_function
     size_t block_size;
 };
 
-enum modes
-{
-    MODE_ENCRYPTION,
-    MODE_DECRYPTION
-};
+// enum modes
+// {
+//     MODE_ENCRYPTION,
+//     MODE_DECRYPTION
+// };
 
-struct flags
-{
-    enum modes mode;
-    char *input;
-    char *output;
-};
+// struct flags
+// {
+//     enum modes mode;
+//     char *input;
+//     char *output;
+// };
 
-int run_cipher(struct ssl_function *cipher_func,
+int run_cryption(struct ssl_function *cipher_func,
                 int optc,
                 char **optv);
 
-#endif /* CIPHER_FUNCTIONS_H */
+#endif /* CRYPTION_FUNCTIONS_H */
