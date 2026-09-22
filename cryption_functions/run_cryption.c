@@ -257,7 +257,7 @@ static int run_cryption_stream(const struct cryption_function *cryption_func,
         print_cryption_error(cryption_func->func.name, "read", err);
         return (-1);
     }
-    else if (state == -2)
+    else if (status == -2)
         return (-1);
     return (0);
 }
