@@ -24,19 +24,6 @@ struct cryption_function
     int    needs_iv;
 };
 
-// enum modes
-// {
-//     MODE_ENCRYPTION,
-//     MODE_DECRYPTION
-// };
-
-// struct flags
-// {
-//     enum modes mode;
-//     char *input;
-//     char *output;
-// };
-
 int run_cryption(const struct ssl_function *func,
                 int optc,
                 char **optv);

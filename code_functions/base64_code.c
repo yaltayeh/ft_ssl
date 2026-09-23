@@ -1,5 +1,6 @@
 #include "code_functions.h"
 #include <string.h>
+#include <stdlib.h>
 #include "../ft_ssl.h"
 
 static const char BASE64_ALPHABET[65] =
@@ -55,18 +56,32 @@ static int base64_decode(const uint8_t codes[4], uint8_t data[3])
 
 char *data_to_base64(const uint8_t *data, size_t size)
 {
-    size_t out_size = (size / 3) + !!size;
-    char *out = malloc(out_size + 1);
+    size_t full_blocks = size / 3;
+    size_t remainder   = size % 3;
+    size_t out_size    = ((size + 2) / 3) * 4;
 
-    for (size_t i = 0; i < size / 3; i++)
+    char *out = malloc(out_size + 1);
+    if (!out)
+        return (NULL);
+
+    for (size_t i = 0; i < full_blocks; i++)
+        base64_encode(data + (i * 3), (uint8_t *)out + (i * 4));
+
+    if (remainder > 0)
     {
-        base64_encode(data + (i * 3), out_size + (i * 4));
+        uint8_t last[3] = {0, 0, 0};
+        memcpy(last, data + (full_blocks * 3), remainder);
+
+        uint8_t *dst = (uint8_t *)out + (full_blocks * 4);
+        base64_encode(last, dst);
+
+        size_t valid_codes = (remainder * 8 + 5) / 6;
+        for (size_t i = valid_codes; i < 4; i++)
+            dst[i] = '=';
     }
 
-    size_t left = size % 3;
-    uint8_t 
-    for (size_t i = size - left; i < size; i++)
-
+    out[out_size] = '\0';
+    return (out);
 }
 
 const struct code_function base64_function = {

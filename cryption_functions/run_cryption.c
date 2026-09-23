@@ -132,7 +132,10 @@ static int run_encryption_stream(const struct cryption_function *cryption_func,
 {
     uint8_t block[8];
     uint8_t out_block[8];
+    // uint8_t buffer[16];
+    // size_t  buffer_len;
 
+    // buffer_len = 0;
     while (1)
     {
         ssize_t n = read_ci(input, (char *)block, 8);
@@ -153,6 +156,8 @@ static int run_encryption_stream(const struct cryption_function *cryption_func,
 
         if (cryption_func->needs_iv)
             memcpy(prev_block, out_block, 8);
+
+        // memcpy(buffer + buffer_len, out_block, 8);
 
         write(output_fd, out_block, 8);
 
