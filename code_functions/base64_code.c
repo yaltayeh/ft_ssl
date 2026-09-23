@@ -19,9 +19,9 @@ static const char ALPHABET_BASE64[] = {
     ['='] = 0,
 };
 
-static void base64_encode(const uint8_t text[3], uint8_t codes[4])
+static void base64_encode(const uint8_t data[3], uint8_t codes[4])
 {
-    uint64_t block = big_endian_decode(text, 3);
+    uint64_t block = big_endian_decode(data, 3);
 
     codes[0] = BASE64_ALPHABET[(block >> 18) & 0x3F];
     codes[1] = BASE64_ALPHABET[(block >> 12) & 0x3F];
@@ -37,7 +37,7 @@ static int check_base64(char c)
          || c == '+' || c == '/' || c == '=');
 }
 
-static int base64_decode(const uint8_t codes[4], uint8_t text[3])
+static int base64_decode(const uint8_t codes[4], uint8_t data[3])
 {
     uint64_t block = 0;
 
@@ -48,9 +48,25 @@ static int base64_decode(const uint8_t codes[4], uint8_t text[3])
         block <<= 6;
         block |= ALPHABET_BASE64[codes[i]];
     }
-    big_endian_encode(block, text, 3);
+    big_endian_encode(block, data, 3);
 
     return (0);
+}
+
+char *data_to_base64(const uint8_t *data, size_t size)
+{
+    size_t out_size = (size / 3) + !!size;
+    char *out = malloc(out_size + 1);
+
+    for (size_t i = 0; i < size / 3; i++)
+    {
+        base64_encode(data + (i * 3), out_size + (i * 4));
+    }
+
+    size_t left = size % 3;
+    uint8_t 
+    for (size_t i = size - left; i < size; i++)
+
 }
 
 const struct code_function base64_function = {
