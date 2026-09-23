@@ -23,6 +23,9 @@ SRCS =	main.c								\
 	cryption_functions/run_cryption.c		\
 	cryption_functions/cryption_functions.c	\
 	cryption_functions/des_cryption.c		\
+	code_functions/run_code.c				\
+	code_functions/code_functions.c			\
+	code_functions/base64_code.c			\
 
 OBJS = $(SRCS:%.c=$(BUILD_DIR)/%.o)
 
