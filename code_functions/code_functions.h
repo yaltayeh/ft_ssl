@@ -7,7 +7,7 @@
 
 struct code_function
 {
-    struct ssl_function func;
+    struct ssl_function base;
 
     void (*encode)(const uint8_t *text, uint8_t *codes);
     int (*decode)(const uint8_t *codes, uint8_t *text);

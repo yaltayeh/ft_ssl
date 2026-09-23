@@ -16,7 +16,7 @@ struct hash_context
 
 struct hash_function
 {
-    struct ssl_function func;
+    struct ssl_function base;
     void (*init)(struct hash_context *ctx);
     void (*process)(struct hash_context *ctx, const uint8_t *block);
     void (*final)(struct hash_context *ctx, uint8_t *output);

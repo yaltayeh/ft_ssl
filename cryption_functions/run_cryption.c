@@ -254,7 +254,7 @@ static int run_cryption_stream(const struct cryption_function *cryption_func,
     if (status == -1)
     {
         int err = errno ? errno : EIO;
-        print_cryption_error(cryption_func->func.name, "read", err);
+        print_cryption_error(cryption_func->base.name, "read", err);
         return (-1);
     }
     else if (status == -2)
@@ -284,7 +284,7 @@ int run_cryption(const struct ssl_function *func, int optc, char **optv)
         : create_ci_from_stdin();
     if (!input)
     {
-        print_cryption_error(cryption_func->func.name,
+        print_cryption_error(cryption_func->base.name,
                             flags.input_path ? flags.input_path : "stdin", errno);
         return (1);
     }
@@ -295,7 +295,7 @@ int run_cryption(const struct ssl_function *func, int optc, char **optv)
         output_fd = open(flags.output_path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
         if (output_fd < 0)
         {
-            print_cryption_error(cryption_func->func.name, flags.output_path, errno);
+            print_cryption_error(cryption_func->base.name, flags.output_path, errno);
             free_ci(input);
             return (1);
         }

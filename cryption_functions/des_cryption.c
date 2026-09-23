@@ -249,8 +249,8 @@ static void des_decrypt(struct cryption_context *ctx, const uint8_t *cipher, uin
 }
 
 const struct cryption_function des_ecb_cryption_function = {
-    .func.name         = "des-ecb",
-    .func.display_name = "DES-ECB",
+    .base.name         = "des-ecb",
+    .base.display_name = "DES-ECB",
     .init              = des_init,
     .encrypt           = des_encrypt,
     .decrypt           = des_decrypt,
@@ -261,8 +261,8 @@ const struct cryption_function des_ecb_cryption_function = {
 };
 
 const struct cryption_function des_cbc_cryption_function = {
-    .func.name         = "des-cbc",
-    .func.display_name = "DES-CBC",
+    .base.name         = "des-cbc",
+    .base.display_name = "DES-CBC",
     .init              = des_init,
     .encrypt           = des_encrypt,
     .decrypt           = des_decrypt,

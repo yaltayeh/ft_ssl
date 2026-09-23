@@ -12,7 +12,7 @@ struct cryption_context
 
 struct cryption_function
 {
-    struct ssl_function func;
+    struct ssl_function base;
 
     void (*init)(struct cryption_context *ctx, const uint8_t *raw_key);
     void (*decrypt)(struct cryption_context *ctx, const uint8_t *cipher, uint8_t *plain);

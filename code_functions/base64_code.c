@@ -54,8 +54,8 @@ static int base64_decode(const uint8_t codes[4], uint8_t text[3])
 }
 
 const struct code_function base64_function = {
-    .func.name         = "base64",
-    .func.display_name = "BASE64",
+    .base.name         = "base64",
+    .base.display_name = "BASE64",
     .encode            = base64_encode,
     .decode            = base64_decode,
     .text_size         = 3,

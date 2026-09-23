@@ -188,8 +188,8 @@ static void md5_final(struct hash_context *ctx, uint8_t *output)
 }
 
 const struct hash_function md5_hash_function = {
-    .func.name          = "md5",
-    .func.display_name  = "MD5",
+    .base.name          = "md5",
+    .base.display_name  = "MD5",
     .init               = md5_init,
     .process            = md5_process_block,
     .final              = md5_final,

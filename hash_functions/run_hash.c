@@ -86,7 +86,7 @@ static void print_file_or_string_output(const struct hash_function *hash_func,
         return;
     }
 
-    out_str(hash_func->func.display_name);
+    out_str(hash_func->base.display_name);
     out_str(" (");
     if (!is_file)
         out_str("\"");
@@ -196,9 +196,9 @@ static int run_hash_function(const struct hash_function *hash_func, struct conte
         int err = errno ? errno : EIO;
 
         if (ci->type == CONTENT_TYPE_FILE)
-            print_entry_error(hash_func->func.name, ci->u.file.filename, err);
+            print_entry_error(hash_func->base.name, ci->u.file.filename, err);
         else
-            print_entry_error(hash_func->func.name, ci->u.string.string, err);
+            print_entry_error(hash_func->base.name, ci->u.string.string, err);
 
         if (store_data)
             disable_store_buffer();

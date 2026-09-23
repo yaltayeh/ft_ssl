@@ -42,8 +42,8 @@ static void sha224_hash_final(struct hash_context *ctx, uint8_t *output)
 }
 
 const struct hash_function sha224_hash_function = {
-    .func.name          = "sha224",
-    .func.display_name  = "SHA224",
+    .base.name          = "sha224",
+    .base.display_name  = "SHA224",
     .init               = sha224_hash_init,
     .process            = sha256_hash_process,
     .final              = sha224_hash_final,

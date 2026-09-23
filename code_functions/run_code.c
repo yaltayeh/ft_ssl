@@ -74,8 +74,6 @@ static ssize_t read_code_filtered(struct content_input *input, uint8_t *buffer, 
     return (ssize_t)filled;
 }
 
-#include <stdio.h>
-
 static int run_code_stream(const struct code_function *code_func,
                             struct content_input *input, int outfd,
                             int decode)
@@ -159,7 +157,7 @@ int run_code(const struct ssl_function *func, int optc, char **optv)
         : create_ci_from_stdin();
     if (!input)
     {
-        print_code_error(code_func->func.name,
+        print_code_error(code_func->base.name,
                             flags.input_path ? flags.input_path : "stdin", errno);
         return (1);
     }
@@ -170,7 +168,7 @@ int run_code(const struct ssl_function *func, int optc, char **optv)
         outfd = open(flags.output_path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
         if (outfd < 0)
         {
-            print_code_error(code_func->func.name, flags.output_path, errno);
+            print_code_error(code_func->base.name, flags.output_path, errno);
             free_ci(input);
             return (1);
         }
