@@ -6,6 +6,8 @@
 #include <unistd.h>
 #include <sys/fcntl.h>
 
+void base64_encode(const uint8_t data[3], uint8_t codes[4]);
+
 /*
 ** Same error-reporting shape as run_hash's print_entry_error:
 ** ft_ssl: <command>: <entry>: <reason>
@@ -124,7 +126,35 @@ static void xor_block(uint8_t *dst, const uint8_t *src, size_t len)
         dst[i] ^= src[i];
 }
 
+static ssize_t print_base64(int fd, char *buf, size_t nbytes, int flush)
+{
+    static char buffer[128];
+    static size_t buffer_len = 0;
+
+    if (buf)
+    {
+        memcpy(buffer + buffer_len, buf, nbytes);
+        buffer_len += nbytes;
+    }
+
+    if (buffer_len >= 64)
+    {
+        write(fd, buffer, 64);
+        write(fd, "\n", 1);
+        memcpy(buffer, buffer + 64, buffer_len - 64);
+        buffer_len -= 64;
+    }
+    if (flush && buffer_len > 0)
+    {
+        write(fd, buffer, buffer_len);
+        write(fd, "\n", 1);
+        buffer_len = 0;
+    }
+    return (0);
+}
+
 static int run_encryption_stream(const struct cryption_function *cryption_func,
+                                    struct cryption_flags *flags,
                                     struct content_input *input,
                                     struct cryption_context *ctx,
                                     uint8_t prev_block[8],
@@ -132,10 +162,10 @@ static int run_encryption_stream(const struct cryption_function *cryption_func,
 {
     uint8_t block[8];
     uint8_t out_block[8];
-    // uint8_t buffer[16];
-    // size_t  buffer_len;
+    uint8_t buffer[16];
+    size_t  buffer_len;
 
-    // buffer_len = 0;
+    buffer_len = 0;
     while (1)
     {
         ssize_t n = read_ci(input, (char *)block, 8);
@@ -157,17 +187,50 @@ static int run_encryption_stream(const struct cryption_function *cryption_func,
         if (cryption_func->needs_iv)
             memcpy(prev_block, out_block, 8);
 
-        // memcpy(buffer + buffer_len, out_block, 8);
+            
+        if (flags->base64)
+        {
+            uint8_t codes[4];
+            memcpy(buffer + buffer_len, out_block, 8);
+            buffer_len += 8;
 
-        write(output_fd, out_block, 8);
+            size_t i;
+            for (i = 0; buffer_len >= 3; i++)
+            {
+                base64_encode(buffer + (i * 3), codes);
+                print_base64(output_fd, (char *)codes, 4, 0);
+                buffer_len -= 3;
+            }
+            memcpy(buffer, buffer + (i * 3), buffer_len);
+        }
+        else
+        {
+            write(output_fd, out_block, 8);
+        }
 
         if (n < 8)
             break; /* that was the (now padded) final block */
     }
+    
+    if (flags->base64 && buffer_len > 0)
+    {
+        uint8_t last[3] = {0, 0, 0};
+        uint8_t codes[4];
+
+        memcpy(last, buffer, buffer_len);
+        base64_encode(last, codes);
+        for (size_t i = (buffer_len * 8 + 5) / 6; i < 4; i++)
+            codes[i] = '=';
+        print_base64(output_fd, (char *)codes, 4, 0);
+    }
+    if (flags->base64)
+        print_base64(output_fd, NULL, 0, 1);
+
     return (0);
 }
 
 static int run_decryption_stream(const struct cryption_function *cryption_func,
+                                    struct cryption_flags *flags,
                                     struct content_input *input,
                                     struct cryption_context *ctx,
                                     uint8_t prev_block[8],
@@ -178,6 +241,7 @@ static int run_decryption_stream(const struct cryption_function *cryption_func,
     ** something in between. That means we can't tell whether a given
     ** 8-byte block is the last one until the *next* read confirms EOF.
     ** One-block lookahead is unavoidable here, unlike encryption. */
+    (void)flags;
     uint8_t block[8];
     uint8_t out_block[8];
     uint8_t pending[8];
@@ -233,8 +297,9 @@ static int run_decryption_stream(const struct cryption_function *cryption_func,
 }
 
 static int run_cryption_stream(const struct cryption_function *cryption_func,
+                                struct cryption_flags *flags,
                                 struct content_input *input, int output_fd,
-                                const uint8_t *key, uint8_t iv[8], int decrypt)
+                                const uint8_t *key, uint8_t iv[8])
 {
     void *state = malloc(cryption_func->state_size);
     if (!state)
@@ -250,10 +315,10 @@ static int run_cryption_stream(const struct cryption_function *cryption_func,
         memcpy(prev_block, iv, 8);
 
     int status = 0;
-    if (decrypt)
-        status = run_decryption_stream(cryption_func, input, &ctx, prev_block, output_fd);
+    if (flags->decrypt)
+        status = run_decryption_stream(cryption_func, flags, input, &ctx, prev_block, output_fd);
     else
-        status = run_encryption_stream(cryption_func, input, &ctx, prev_block, output_fd);
+        status = run_encryption_stream(cryption_func, flags, input, &ctx, prev_block, output_fd);
 
     free(state);
     if (status == -1)
@@ -310,7 +375,7 @@ int run_cryption(const struct ssl_function *func, int optc, char **optv)
     ** when encrypting (or decode the input stream when decrypting) once
     ** the base64 module exists. */
 
-    int status = run_cryption_stream(cryption_func, input, output_fd, key, iv, flags.decrypt);
+    int status = run_cryption_stream(cryption_func, &flags, input, output_fd, key, iv);
 
     if (flags.output_path)
         close(output_fd);

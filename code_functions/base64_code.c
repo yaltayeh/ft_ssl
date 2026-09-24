@@ -20,7 +20,7 @@ static const char ALPHABET_BASE64[] = {
     ['='] = 0,
 };
 
-static void base64_encode(const uint8_t data[3], uint8_t codes[4])
+void base64_encode(const uint8_t data[3], uint8_t codes[4])
 {
     uint64_t block = big_endian_decode(data, 3);
 
